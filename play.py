@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from monosim.player import Player
-from monosim.board import get_board, get_roads, get_properties, get_community_chest_cards, get_bank
-
+from monosim.bank import Bank
+from monosim.board import get_board, get_roads, get_properties, get_community_chest_cards
 
 if __name__ == '__main__':
     import random
@@ -17,11 +17,10 @@ if __name__ == '__main__':
 
     for seed in range(0, 10000):
         random.seed(seed)
-        bank = get_bank()
+        bank = Bank()
         list_board, dict_roads = get_board(),  get_roads()
         dict_properties = get_properties()
-        dict_community_chest_cards = get_community_chest_cards()
-        community_cards_deck = list(dict_community_chest_cards.keys())
+        community_cards_deck = list(get_community_chest_cards().keys())
 
         list_players = list([ Player(f"Player{i}", i, bank, list_board, dict_roads, dict_properties, community_cards_deck) for i in range(player_count) ])
 

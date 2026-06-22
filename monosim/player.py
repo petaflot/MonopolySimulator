@@ -1,4 +1,5 @@
 from monosim.board import get_color_to_house_mapping
+from monosim.custom_exceptions import *
 import random
 from copy import copy
 #  TODO allow user to set verbosity. Text should be printed only if verbosity=1 is set.
@@ -10,10 +11,7 @@ from copy import copy
 #  to the same value
 #  TODO Implement cards functionality (opportunity, etc.)
 
-class NoMoreHousesAvailable(Exception): pass
-class NoMoreHotelsAvailable(Exception): pass
-class InsufficientFundsAvailable(Exception): pass
-class NothingHereToSell(Exception): pass
+AUTO_BUY = True
 
 color_property_count = {
         'brown':        2,
@@ -90,14 +88,15 @@ class Player:
                 'mortgaged_roads': self._list_mortgaged_roads, 'mortgaged_stations': self._list_mortgaged_stations,
                 'mortgaged_utilities': self._list_mortgaged_utilities, 'owned_colors': self.owned_colors,
                 'owned_houses_hotels': self._dict_owned_houses_hotels, 'has_lost': self._has_lost,
-                'bank_cash': self._bank['cash']}
+                'bank_cash': self._bank.cash}
 
     def get_print_state(self):
         from termcolor import colored
+        owned_hotels = sum([i[1] for i in self._dict_owned_houses_hotels.values()])
 
         return f"""{self._name}, dice value {self._dice_value:>2}, cash {self._cash:>5}, mortgageable amount {self._properties_total_mortgageable_amount:>5}, in position {self._position:>2} ({self._list_board[self._position]['name']})
     owned_roads: {', '.join([f"{r} ({self._dict_roads[r]['color']})" if r not in self._list_mortgaged_roads else colored(r,'grey') for r in self._list_owned_roads])},
-    owned_utilities={self.get_owned_utilities_count()}, owned_stations={self.get_owned_stations_count()}, owned_houses={sum([i[0] for i in self._dict_owned_houses_hotels.values()])}, owned_hotels={sum([i[1] for i in self._dict_owned_houses_hotels.values()])}, {self.owned_colors = }"""
+    owned_utilities={self.get_owned_utilities_count()}, owned_stations={self.get_owned_stations_count()}, owned_houses={sum([i[0] for i in self._dict_owned_houses_hotels.values()]) -4*owned_hotels}, owned_hotels={owned_hotels}, {self.owned_colors = }"""
 
 
     def set_cash(self, amount):
@@ -130,7 +129,10 @@ class Player:
 
     def buy_or_bid(self, dict_road_info, interactive = False):
         """ Determine whether to buy or to bid the road"""
-        if interactive:
+        if AUTO_BUY or not interactive:
+            # TODO placeholder. To implement.
+            return 'buy'
+        else:
             match dict_road_info['type']:
                 case 'road':
                     return 'buy' if input(f"Do you want to buy '{dict_road_info['name']}' ({dict_road_info['color']}) for {dict_road_info['price']}? ").lower() in ('y','yes') else 'pass'
@@ -140,9 +142,6 @@ class Player:
                     return 'buy' if input(f"Do you want to buy the '{dict_road_info['name']}' utility for {dict_road_info['price']}? ").lower() in ('y','yes') else 'pass'
                 case _:
                     raise ValueError(dict_road_info['type'])
-        else:
-            # TODO placeholder. To implement.
-            return 'buy'
 
     def pay_bank(self, amount):
         """ Pay amount to the bank. Money are subtracted from player's cash and added to bank's total cash.
@@ -154,7 +153,7 @@ class Player:
         if amount > self._cash:
             raise InsufficientFundsAvailable
         # pay bank
-        self._bank['cash'] += amount
+        self._bank.pay(amount)
         self._cash -= amount
 
     def pay_tax(self, tax_amount):
@@ -198,7 +197,7 @@ class Player:
         if self._cash < road_price:
             raise Exception('Player {} does not have enough money'.format(self._name))
         # pay bank
-        self._bank['cash'] += road_price
+        self._bank.pay(road_price)
         self._cash -= road_price
         # exchange ownership
         dict_road_info['belongs_to'] = self._name
@@ -230,7 +229,7 @@ class Player:
         if self._cash < property_price:
             raise Exception('Player {} does not have enough money'.format(self._name))
         # pay bank
-        self._bank['cash'] += property_price
+        self._bank.pay(property_price)
         self._cash -= property_price
         # exchange ownership
         dict_property_info['belongs_to'] = self._name
@@ -328,7 +327,7 @@ class Player:
 
         self._properties_total_mortgageable_amount += mortgage_value
         self._cash -= unmortgage_value
-        self._bank['cash'] = unmortgage_value
+        self._bank.withdraw(-unmortgage_value)
 
     def choose_mortgage_properties(self, amount):
         """ Return a list of properties to mortgage given a required amount. This function
@@ -539,7 +538,11 @@ class Player:
             if hotel == 0 and houses == 0:
                 rent = dict_property_info['rent_with_color_set']
             else:
-                rent = dict_property_info['rent_with_{}_houses_{}_hotels'.format(houses, hotel)]
+                try:
+                    rent = dict_property_info['rent_with_{}_houses_{}_hotels'.format(houses, hotel)]
+                except KeyError:
+                    print(dict_property_info.keys())
+                    raise
         else:
             rent = dict_property_info['rent']
 
@@ -657,7 +660,7 @@ class Player:
                 else:
                     if self._dict_owned_colors[self._dict_roads[road]['color']] and \
                         sum(self._dict_owned_houses_hotels[road]) < 4 and\
-                        self._bank['hotels'] and self._bank['hotels']:
+                        (self._bank._hotels or self._bank._houses):
                         if interactive:
                             return True if input("Do you want to buy a house or hotel? ").lower() in ('y','yes') else False
                         else:
@@ -714,10 +717,10 @@ class Player:
                     except (ValueError, IndexError):
                         break
                     else:
-                        if self._bank['houses'] and self._dict_owned_houses_hotels[p][0] < 4:
+                        if self._bank._houses and self._dict_owned_houses_hotels[p][0] < 4:
                             print(f"buying a house on {p}")
                             self.buy_house(p)
-                        elif self._bank['hotels'] and self._dict_owned_houses_hotels[p][1] == 0:
+                        elif self._bank._hotels and self._dict_owned_houses_hotels[p][1] == 0:
                             print(f"buying a hotel on {p}")
                             self.buy_hotel(p)
                         else:
@@ -752,13 +755,13 @@ class Player:
         :param road: (str) road in where to buy the house
         """
         if self._dict_owned_houses_hotels[road][1] == 1:
-            raise Exception("Player {} already owns a hotel in the road {}. "
+            raise Exception("Player {} already owns a hotel on the road {}. "
                             "No more houses can be bought.".format(self._name, road))
         if self._dict_owned_houses_hotels[road][0] == 4:
-            raise Exception("Player {} already owns 4 houses in the road {}. "
+            raise Exception("Player {} already owns 4 houses on the road {}. "
                             "No more houses can be bought.".format(self._name, road))
 
-        if self._bank['houses'] > 0:
+        if self._bank._houses > 0:
             try:
                 self.pay_bank(self._dict_roads[road]['houses_cost'])
             except InsufficientFundsAvailable:
@@ -766,27 +769,9 @@ class Player:
             else:
                 houses_owned = self._dict_owned_houses_hotels[road][0]
                 self._dict_owned_houses_hotels[road] = (houses_owned + 1, 0)
-                self._bank['houses'] -= 1
+                self._bank._houses -= 1
         else:
             raise NoMoreHousesAvailable
-
-    def sell_house_or_hotel(self, road):
-        """ sell a house or hotel on the given road
-
-        :param road: (str) road from which to sell the house or hotel
-        """
-        if self._dict_owned_houses_hotels[road][1]:
-            amount = self._dict_roads[road]['hotels_cost'] / 2
-            self._dict_owned_houses_hotels[road][1] -= 1
-            self._bank['cash'] -= amount
-            self._cash += amount
-        elif self._dict_owned_houses_hotels[road][0]:
-            amount = self._dict_roads[road]['houses_cost']
-            self._dict_owned_houses_hotels[road][0] -= 1
-            self._bank['cash'] -= amount
-            self._cash += amount
-        else:
-            raise NothingHereToSell
 
     def buy_hotel(self, road):
         """ Buy a hotel in the given road.
@@ -798,16 +783,34 @@ class Player:
             raise Exception("Player {} already owns 1 hotel in the road {}. "
                             "No more hotels can be bought.".format(self._name, road))
 
-        if self._bank['hotels'] > 0:
+        if self._bank._hotels > 0:
             if self._dict_owned_houses_hotels[road][0] != 4:
                 raise Exception("Player {} cannot buy a hotel in road {} if "
                                 "4 houses are not owned first".format(self._name, road))
             self.pay_bank(self._dict_roads[road]['hotels_cost'])
-            self._bank['houses'] += 4
-            self._bank['hotels'] -= 1
-            self._dict_owned_houses_hotels[road] = (5, 1)
+            self._bank._houses += 4
+            self._bank._hotels -= 1
+            self._dict_owned_houses_hotels[road] = (4, 1)
         else:
             raise NoMoreHotelsAvailable
+
+    def sell_house_or_hotel(self, road):
+        """ sell a house or hotel on the given road
+
+        :param road: (str) road from which to sell the house or hotel
+        """
+        if self._dict_owned_houses_hotels[road][1]:
+            amount = self._dict_roads[road]['hotels_cost'] / 2
+            self._dict_owned_houses_hotels[road][1] -= 1
+            self._bank.withdraw(amount)
+            self._cash += amount
+        elif self._dict_owned_houses_hotels[road][0]:
+            amount = self._dict_roads[road]['houses_cost']
+            self._dict_owned_houses_hotels[road][0] -= 1
+            self._bank.withdraw(amount)
+            self._cash += amount
+        else:
+            raise NothingHereToSell
 
     def want_to_mortgage_to_buy_house(self, interactive = False):
         """ Determine if player wants to mortgage properties to gain money to buy a house, when the player doesn't
@@ -939,7 +942,7 @@ class Player:
         if len(self.owned_colors) and self.want_to_buy_house_hotel(interactive):
 
             road, house_or_hotel = self.choose_house_hotel_to_buy(interactive)
-            if house_or_hotel == 'house' and self._bank['houses'] > 0 and self._dict_owned_houses_hotels[road][0] < 4:
+            if house_or_hotel == 'house' and self._bank._houses and self._dict_owned_houses_hotels[road][0] < 4:
                 house_price = self._dict_roads[road]['houses_cost']
                 if self.have_enough_money(house_price):
                     self.buy_house(road)
@@ -948,7 +951,7 @@ class Player:
                         if self._properties_total_mortgageable_amount + self._cash >= house_price:
                             self.get_money_from_mortgages(house_price)
                             self.buy_house(road)
-            elif house_or_hotel == 'hotel' and self._bank['hotels'] > 0 and self._dict_owned_houses_hotels[road][1] == 0:
+            elif house_or_hotel == 'hotel' and self._bank._hotels > 0 and self._dict_owned_houses_hotels[road][1] == 0:
                 hotel_price = self._dict_roads[road]['hotels_cost']
                 if self.have_enough_money(hotel_price):
                     self.buy_hotel(road)

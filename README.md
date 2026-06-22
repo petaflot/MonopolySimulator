@@ -8,6 +8,8 @@
 
 Monopoly simulator allows you to rapidly simulate the game of monopoly with N players. While the library provides an implementation of a simple naive player ("dummy"), their behaviour can be modified to test hypotheses about the best strategies and train intelligent agents with Machine Learning.
 
+Players can also be interactive.
+
 ## Install
 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install monopoly_simulator.

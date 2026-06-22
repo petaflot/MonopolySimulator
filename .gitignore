@@ -1,3 +1,4 @@
 .idea/
 monosim/__pycache__/
 MonopolySimulator.egg-info/
+.*.swp

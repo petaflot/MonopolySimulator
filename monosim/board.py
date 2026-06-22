@@ -83,14 +83,6 @@ def get_board():
     return list_board
 
 
-def get_bank():
-
-    dict_bank = {'cash': 5000,
-                 'houses': 32,
-                 'hotels': 12}
-    return dict_bank
-
-
 def get_roads():
 
     dict_roads = {
