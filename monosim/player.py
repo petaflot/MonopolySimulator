@@ -1,5 +1,6 @@
 from monosim.board import get_color_to_house_mapping
 import random
+from copy import copy
 #  TODO allow user to set verbosity. Text should be printed only if verbosity=1 is set.
 #   Add paramenter to the constructor and a ad-hoc function set_verbosity().
 #   Do this first otherwise it's impossible to run the simulations with jupyter notebooks because of the excessive
@@ -7,12 +8,32 @@ import random
 # TODO make test function to check if the _list_mortgaged_roads is properly used. DO not mortgage properties
 #  from this list Check that attribute _properties_total_mortgageable_amount and _list_mortgaged_roads always sum up
 #  to the same value
-#  TODO check if a road is mortgaged in the function choose_house_hotel_to_buy. If the road is mortgaged is probably
-#   not possible to buy a house (check the rules)
 #  TODO Implement cards functionality (opportunity, etc.)
 
+class NoMoreHousesAvailable(Exception): pass
+class NoMoreHotelsAvailable(Exception): pass
+class InsufficientFundsAvailable(Exception): pass
+class NothingHereToSell(Exception): pass
+
+color_property_count = {
+        'brown':        2,
+        'light_blue':   3,
+        'purple':       3,
+        'orange':       3,
+        'red':          3,
+        'yellow':       3,
+        'green':        3,
+        'blue':         2,
+}
+
+"""
+    NOTE: for simplicity, houser count on a street stays at 4 if a hotel is built
+"""
 
 class Player:
+    _dict_owned_colors = {'brown': None, 'light_blue': None, 'purple': None, 'orange': None,
+                               'red': None, 'yellow': None, 'green': None, 'blue': None}
+
     def __init__(self, name, number, bank, list_board, dict_roads, dict_properties, community_cards_deck):
         self._name = name
         self._number = number
@@ -22,7 +43,7 @@ class Player:
 
         self._position = 0
         self._dice_value = 0
-        self._cash = 1500
+        self._cash = 15000
         self._properties_total_mortgageable_amount = 0
         self._exit_jail = False  # holds card to exit jail
         self._jail_count = 0
@@ -36,12 +57,14 @@ class Player:
         self._list_mortgaged_roads = []
         self._list_mortgaged_stations = []
         self._list_mortgaged_utilities = []
-        self._dict_owned_colors = {'brown': False, 'light_blue': False, 'purple': False, 'orange': False,
-                                   'red': False, 'yellow': False, 'green': False, 'blue': False}
         self._dict_owned_houses_hotels = {}
         self._has_lost = False
         self.color_to_house_mapping = get_color_to_house_mapping()
         self.community_cards_deck = community_cards_deck
+
+    @property
+    def owned_colors(self):
+        return tuple([c for c, player in self._dict_owned_colors.items() if player is self])
 
     def roll_dice(self):
         """ Simulate the roll of two dice. Returns two int values between 1 and 6.
@@ -59,16 +82,23 @@ class Player:
 
         :return: (dictionary) key: property, value: property value (e.g. {'cash': 100, 'position': 10, ...})
         """
-
         return {'name': self._name, 'number': self._number, 'position': self._position,
                 'dice_value': self._dice_value, 'cash': self._cash,
                 'mortgageable_amount': self._properties_total_mortgageable_amount, 'jail_count': self._jail_count,
                 'exit_jail': self._exit_jail, 'free_visit': self._free_visit, 'owned_roads': self._list_owned_roads,
                 'owned_stations': self._list_owned_stations, 'owned_utilities': self._list_owned_utilities,
                 'mortgaged_roads': self._list_mortgaged_roads, 'mortgaged_stations': self._list_mortgaged_stations,
-                'mortgaged_utilities': self._list_mortgaged_utilities, 'owned_colors': self._dict_owned_colors,
+                'mortgaged_utilities': self._list_mortgaged_utilities, 'owned_colors': self.owned_colors,
                 'owned_houses_hotels': self._dict_owned_houses_hotels, 'has_lost': self._has_lost,
                 'bank_cash': self._bank['cash']}
+
+    def get_print_state(self):
+        from termcolor import colored
+
+        return f"""{self._name}, dice value {self._dice_value:>2}, cash {self._cash:>5}, mortgageable amount {self._properties_total_mortgageable_amount:>5}, in position {self._position:>2} ({self._list_board[self._position]['name']})
+    owned_roads: {', '.join([f"{r} ({self._dict_roads[r]['color']})" if r not in self._list_mortgaged_roads else colored(r,'grey') for r in self._list_owned_roads])},
+    owned_utilities={self.get_owned_utilities_count()}, owned_stations={self.get_owned_stations_count()}, owned_houses={sum([i[0] for i in self._dict_owned_houses_hotels.values()])}, owned_hotels={sum([i[1] for i in self._dict_owned_houses_hotels.values()])}, {self.owned_colors = }"""
+
 
     def set_cash(self, amount):
         self._cash = amount
@@ -79,7 +109,8 @@ class Player:
         :param list_players: (list) players objects of the other opponents
         :return:
         """
-        self._list_players = list_players
+        self._list_players = list_players.copy()
+        self._list_players.remove(self)
 
         # dict of players easier/faster to use later
         self._dict_players = {player._name: player for player in list_players}
@@ -97,10 +128,21 @@ class Player:
         else:
             return amount <= self._cash
 
-    def buy_or_bid(self, dict_road_info):
+    def buy_or_bid(self, dict_road_info, interactive = False):
         """ Determine whether to buy or to bid the road"""
-        # TODO placeholder. To implement.
-        return 'buy'
+        if interactive:
+            match dict_road_info['type']:
+                case 'road':
+                    return 'buy' if input(f"Do you want to buy '{dict_road_info['name']}' ({dict_road_info['color']}) for {dict_road_info['price']}? ").lower() in ('y','yes') else 'pass'
+                case 'station':
+                    return 'buy' if input(f"Do you want to buy the '{dict_road_info['name']}' station for {dict_road_info['price']}? ").lower() in ('y','yes') else 'pass'
+                case 'utility':
+                    return 'buy' if input(f"Do you want to buy the '{dict_road_info['name']}' utility for {dict_road_info['price']}? ").lower() in ('y','yes') else 'pass'
+                case _:
+                    raise ValueError(dict_road_info['type'])
+        else:
+            # TODO placeholder. To implement.
+            return 'buy'
 
     def pay_bank(self, amount):
         """ Pay amount to the bank. Money are subtracted from player's cash and added to bank's total cash.
@@ -110,7 +152,7 @@ class Player:
         """
 
         if amount > self._cash:
-            raise Exception('Player {} does not have enough money to pay the bank'.format(self._name))
+            raise InsufficientFundsAvailable
         # pay bank
         self._bank['cash'] += amount
         self._cash -= amount
@@ -170,22 +212,9 @@ class Player:
         for road in self._list_owned_roads:
             if color == self._dict_roads[road]['color']:
                 count_roads_of_color += 1
-        if color == 'brown' and count_roads_of_color == 2:
-            self._dict_owned_colors[color] = True
-        elif color == 'light_blue' and count_roads_of_color == 3:
-            self._dict_owned_colors[color] = True
-        elif color == 'purple' and count_roads_of_color == 3:
-            self._dict_owned_colors[color] = True
-        elif color == 'orange' and count_roads_of_color == 3:
-            self._dict_owned_colors[color] = True
-        elif color == 'red' and count_roads_of_color == 3:
-            self._dict_owned_colors[color] = True
-        elif color == 'yellow' and count_roads_of_color == 3:
-            self._dict_owned_colors[color] = True
-        elif color == 'green' and count_roads_of_color == 3:
-            self._dict_owned_colors[color] = True
-        elif color == 'blue' and count_roads_of_color == 2:
-            self._dict_owned_colors[color] = True
+
+        if count_roads_of_color == color_property_count[color]:
+            self._dict_owned_colors[color] = self
 
     def buy_property(self, dict_property_info):
         """ Buy property (station or utility)
@@ -230,11 +259,14 @@ class Player:
         # TODO placeholder. To implement.
         return None
 
-    def mortgage_or_bid(self, dict_road_info):
+    def mortgage_or_bid(self, dict_road_info, interactive = False):
         """ Determine whether to mortgage (to buy) or bid"""
         # This function is incomplete. In reality, the player should decide whether to mortgage or bid to try buuying
         # the road at a lower (available) price.
-        return 'mortgage'
+        if interactive:
+            return 'mortgage' if input(f"Do you want to buy and mortgage '{dict_road_info['name']}'? ").lower() in ('y','yes') else 'pass'
+        else:
+            return 'mortgage'
 
     def mortgage(self, property_name, property_type):
 
@@ -338,7 +370,7 @@ class Player:
 
         return list_properties
 
-    def choose_unmortgage_properties(self):
+    def choose_unmortgage_properties(self, interactive = False):
         """ Return a list of properties to unmortgage given the available cash.
 
         Example: if player owns 130 and owns 'old kent road' (unmortgage value 33) and 'kings cross station'
@@ -349,24 +381,26 @@ class Player:
 
         :return: (list) list of tuples (property_type, property_name)
         """
-
-        total_unmortgage_value = 0
-        list_unmortgage_properties = []
-        for road_name in self._list_mortgaged_roads:
-            unmortgage_value = self._dict_roads[road_name]['unmortgage_value']
-            if unmortgage_value + total_unmortgage_value < self._cash:
-                list_unmortgage_properties.append(('road', road_name))
-                total_unmortgage_value += unmortgage_value
-        for station_name in self._list_mortgaged_stations:
-            unmortgage_value = self._dict_properties[station_name]['unmortgage_value']
-            if unmortgage_value + total_unmortgage_value < self._cash:
-                list_unmortgage_properties.append(('station', station_name))
-                total_unmortgage_value += unmortgage_value
-        for utility_name in self._list_mortgaged_utilities:
-            unmortgage_value = self._dict_properties[utility_name]['unmortgage_value']
-            if unmortgage_value + total_unmortgage_value < self._cash:
-                list_unmortgage_properties.append(('utility', utility_name))
-                total_unmortgage_value += unmortgage_value
+        if interactive:
+            print("NotImplementedError")
+        else:
+            total_unmortgage_value = 0
+            list_unmortgage_properties = []
+            for road_name in self._list_mortgaged_roads:
+                unmortgage_value = self._dict_roads[road_name]['unmortgage_value']
+                if unmortgage_value + total_unmortgage_value < self._cash:
+                    list_unmortgage_properties.append(('road', road_name))
+                    total_unmortgage_value += unmortgage_value
+            for station_name in self._list_mortgaged_stations:
+                unmortgage_value = self._dict_properties[station_name]['unmortgage_value']
+                if unmortgage_value + total_unmortgage_value < self._cash:
+                    list_unmortgage_properties.append(('station', station_name))
+                    total_unmortgage_value += unmortgage_value
+            for utility_name in self._list_mortgaged_utilities:
+                unmortgage_value = self._dict_properties[utility_name]['unmortgage_value']
+                if unmortgage_value + total_unmortgage_value < self._cash:
+                    list_unmortgage_properties.append(('utility', utility_name))
+                    total_unmortgage_value += unmortgage_value
 
         return list_unmortgage_properties
 
@@ -447,7 +481,7 @@ class Player:
         :param color: (String) Road's color
         :return: (Boolean) True if player owns all the roads of a given color.
         """
-        return self._dict_owned_colors[color]
+        return True if self._dict_owned_colors[color] is self else False
 
     def get_houses_hotel_count(self, road_name):
         """ Given a road name, returns the number of houses or hotel owned.
@@ -605,20 +639,7 @@ class Player:
         else:
             raise Exception('Tax type {} not recognized'.format(tax_type))
 
-    def owns_all_roads_of_a_color(self):
-        """ Return True if the players owns at least all the roads of one color, False otherwhise.
-
-        :return: (bool) True if players owns at least one color.
-        """
-        if self._dict_owned_colors['brown'] or self._dict_owned_colors['light_blue'] or \
-                self._dict_owned_colors['purple'] or self._dict_owned_colors['orange'] or \
-                self._dict_owned_colors['red'] or self._dict_owned_colors['yellow'] or \
-                self._dict_owned_colors['green'] or self._dict_owned_colors['blue']:
-                    return True
-        else:
-            return False
-
-    def want_to_buy_house_hotel(self):
+    def want_to_buy_house_hotel(self, interactive = False):
         """ Determine if the player wants to buy a house or a hotel. This function should be used only if the player
             owns at least all the roads of one color (e.g. player owns all the roads with the brown color).
 
@@ -627,16 +648,33 @@ class Player:
         # Note: this function is in reality more complex. This is just a temporary logic
         # until a more "intelligent" logic is built. For now we let the player decide to buy a house/hotel if it
         # falls in a cell multiple of 5.
-        return self._dice_value % 5 == 0
+        for color in self.owned_colors:
+            for road in self.color_to_house_mapping[color]:
+                try:
+                    houses, hotels = self._dict_owned_houses_hotels[road]
+                except KeyError:
+                    continue
+                else:
+                    if self._dict_owned_colors[self._dict_roads[road]['color']] and \
+                        sum(self._dict_owned_houses_hotels[road]) < 4 and\
+                        self._bank['hotels'] and self._bank['hotels']:
+                        if interactive:
+                            return True if input("Do you want to buy a house or hotel? ").lower() in ('y','yes') else False
+                        else:
+                            return self._dice_value % 5 == 0
 
-    def want_to_unmortgage(self):
+    def want_to_unmortgage(self, interactive = False):
         """ Determine if the player wants to unmortgage a road or a property.
 
         :return: (bool) True if the player decides to unmortgage roads or properties
         """
-        return self._dice_value % 2 == 0
+        print(f"{self._properties_total_mortgageable_amount=}")
+        if interactive:
+            return True if input("Do you want to unmortgage a property? ").lower() in ('y','yes') else False
+        else:
+            return self._dice_value % 2 == 0
 
-    def choose_house_hotel_to_buy(self):
+    def choose_house_hotel_to_buy(self, interactive = False):
         """ Select where to buy a house or a hotel. It returns the road name and whether the player should buy a house
             or a hotel. In case the player cannot buy any house or hotel (cause of lack of money or he has
             all houses/hotels already), then None is returned.
@@ -649,16 +687,50 @@ class Player:
                                                     one whether to buy a house or a hotel. If player can't buy either,
                                                     (None, None) is returned.
         """
+        #  TODO check if a road is mortgaged ; if yes, it is not possible to buy a house
+
         # Note: this function is in reality more complex. This is just a temporary logic
         # until a more "intelligent" logic is built. If the players owns more than one color, the function should
         # more intelligently choose the color where to buy a house or hotel.
 
-        for color in ['blue', 'green', 'yellow', 'red', 'orange', 'purple', 'light_blue', 'brown']:
-            if self._dict_owned_colors[color]:
+        if interactive is True:
+            l = []
+            for color in self._dict_owned_colors:
+                for road in self.color_to_house_mapping[color]:
+                    try:
+                        houses, hotels = self._dict_owned_houses_hotels[road]
+                    except KeyError:
+                        continue
+                    else:
+                        if self._dict_owned_colors[self._dict_roads[road]['color']]:
+                            if sum(self._dict_owned_houses_hotels[road]) < 5:
+                                print(f"\t({len(l):>2}) ({self._dict_roads[road]['color']}) {road}: {houses=}, {hotels=}")
+                                l.append(road)
+
+            if len(l):
+                while True:
+                    try:
+                        p = l[int(input("select index "))]
+                    except (ValueError, IndexError):
+                        break
+                    else:
+                        if self._bank['houses'] and self._dict_owned_houses_hotels[p][0] < 4:
+                            print(f"buying a house on {p}")
+                            self.buy_house(p)
+                        elif self._bank['hotels'] and self._dict_owned_houses_hotels[p][1] == 0:
+                            print(f"buying a hotel on {p}")
+                            self.buy_hotel(p)
+                        else:
+                            print(f"not more estate available on {p}")
+        else:
+            for color in self._dict_owned_colors:
                 min_count_houses_hotels_in_road = 5
 
-                for i, road in enumerate(self.color_to_house_mapping[color]):
-                    houses, hotels = self._dict_owned_houses_hotels[road]
+                for road in self.color_to_house_mapping[color]:
+                    try:
+                        houses, hotels = self._dict_owned_houses_hotels[road]
+                    except KeyError:
+                        continue
                     count_houses_hotels_in_road = houses + hotels
                     if count_houses_hotels_in_road < min_count_houses_hotels_in_road:
                         min_count_houses_hotels_in_road = count_houses_hotels_in_road
@@ -679,21 +751,42 @@ class Player:
 
         :param road: (str) road in where to buy the house
         """
+        if self._dict_owned_houses_hotels[road][1] == 1:
+            raise Exception("Player {} already owns a hotel in the road {}. "
+                            "No more houses can be bought.".format(self._name, road))
         if self._dict_owned_houses_hotels[road][0] == 4:
             raise Exception("Player {} already owns 4 houses in the road {}. "
                             "No more houses can be bought.".format(self._name, road))
 
         if self._bank['houses'] > 0:
-            house_price = self._dict_roads[road]['houses_cost']
-            if self._cash < house_price:
-                raise Exception("Player {} has not enough money to buy a house in road {}".format(self._name, road))
-
-            self.pay_bank(house_price)
-            houses_owned = self._dict_owned_houses_hotels[road][0]
-            self._dict_owned_houses_hotels[road] = (houses_owned + 1, 0)
-            self._bank['houses'] -= 1
+            try:
+                self.pay_bank(self._dict_roads[road]['houses_cost'])
+            except InsufficientFundsAvailable:
+                print("InsufficientFundsAvailable")
+            else:
+                houses_owned = self._dict_owned_houses_hotels[road][0]
+                self._dict_owned_houses_hotels[road] = (houses_owned + 1, 0)
+                self._bank['houses'] -= 1
         else:
-            raise Exception('The bank has no more houses to sell.')
+            raise NoMoreHousesAvailable
+
+    def sell_house_or_hotel(self, road):
+        """ sell a house or hotel on the given road
+
+        :param road: (str) road from which to sell the house or hotel
+        """
+        if self._dict_owned_houses_hotels[road][1]:
+            amount = self._dict_roads[road]['hotels_cost'] / 2
+            self._dict_owned_houses_hotels[road][1] -= 1
+            self._bank['cash'] -= amount
+            self._cash += amount
+        elif self._dict_owned_houses_hotels[road][0]:
+            amount = self._dict_roads[road]['houses_cost']
+            self._dict_owned_houses_hotels[road][0] -= 1
+            self._bank['cash'] -= amount
+            self._cash += amount
+        else:
+            raise NothingHereToSell
 
     def buy_hotel(self, road):
         """ Buy a hotel in the given road.
@@ -706,21 +799,17 @@ class Player:
                             "No more hotels can be bought.".format(self._name, road))
 
         if self._bank['hotels'] > 0:
-            hotel_price = self._dict_roads[road]['hotels_cost']
-            if self._cash < hotel_price:
-                raise Exception("Player {} has not enough money to buy a hotel in road {}".format(self._name, road))
-
-            self.pay_bank(hotel_price)
-            houses_owned, hotels_owned = self._dict_owned_houses_hotels[road]
-            if houses_owned != 4:
+            if self._dict_owned_houses_hotels[road][0] != 4:
                 raise Exception("Player {} cannot buy a hotel in road {} if "
                                 "4 houses are not owned first".format(self._name, road))
-            self._dict_owned_houses_hotels[road] = (houses_owned, 1)
+            self.pay_bank(self._dict_roads[road]['hotels_cost'])
+            self._bank['houses'] += 4
             self._bank['hotels'] -= 1
+            self._dict_owned_houses_hotels[road] = (5, 1)
         else:
-            raise Exception('The bank has no more hotels to sell.')
+            raise NoMoreHotelsAvailable
 
-    def want_to_mortgage_to_buy_house(self):
+    def want_to_mortgage_to_buy_house(self, interactive = False):
         """ Determine if player wants to mortgage properties to gain money to buy a house, when the player doesn't
             have enough cash to buy.
 
@@ -728,7 +817,10 @@ class Player:
         """
         # Note: For now we do not allow the player to mortgage properties to buy houses. This is just a placeholder
         # function for now. We will consider more complex logics in the future.
-        return False
+        if interactive:
+            return True if input("Do you want to mortgage a property to buy a house? ").lower() in ('y','yes') else False
+        else:
+            return False
 
     def want_to_mortgage_to_buy_hotel(self):
         """ Determine if player wants to mortgage properties to gain money to buy a hotel, when the player doesn't
@@ -738,7 +830,10 @@ class Player:
         """
         # Note: For now we do not allow the player to mortgage properties to buy hotels. This is just a placeholder
         # function for now. We will consider more complex logics in the future.
-        return False
+        if interactive:
+            return True if input("Do you want to mortgage a property to buy a hotel? ").lower() in ('y','yes') else False
+        else:
+            return False
 
     def go_to_jail(self):
         """ Move the player in the jail cell. Change player position to 10. Used when the player ends in the cell
@@ -750,7 +845,7 @@ class Player:
         self._jail_count = 0
         self._position = (self._position + self._dice_value)
 
-    def pay_jail_or_wait(self):
+    def pay_jail_or_wait(self, interactive = True):
         """ Determine whether the player wants to wait the next turn or pay to get out of the jail. This is used
             only when the jail_counter is lower than three and the dices didn't return equal values ("roll a double").
         :return: (str) 'wait' if the players decides to wait, 'pay otherwise'
@@ -760,7 +855,10 @@ class Player:
             raise Exception('Player {} has been in jail for three consecutive rounds. Player has to pay and leave the'
                             'jail.')
 
-        return 'wait'
+        if interactive:
+            return 'stay' if input("Do you want to got out of jail? ").lower() in ('y','yes') else 'wait'
+        else:
+            return 'wait'
 
     def community_chest_street_repair(self):
         """ Implement logic for the community chest card "street repair", where the player has to pay 40 for each house
@@ -822,11 +920,11 @@ class Player:
             self._cash += 200
 
 
-    def play(self):
+    def play(self, interactive = False):
 
         tuple_dices = self.roll_dice()
         self._dice_value = tuple_dices[0] + tuple_dices[1]
-        if self._position is not 10 or (self._position == 10 and self._free_visit):  # if player is not in jail
+        if self._position != 10 or (self._position == 10 and self._free_visit):  # if player is not in jail
             self._position = (self._position + self._dice_value) % len(self._list_board)
             self._free_visit = True if self._position == 10 else False
 
@@ -838,15 +936,15 @@ class Player:
         board_cell_type = board_cell['type']
 
         # Buy a house or hotel
-        if self.owns_all_roads_of_a_color() and self.want_to_buy_house_hotel():
+        if len(self.owned_colors) and self.want_to_buy_house_hotel(interactive):
 
-            road, house_or_hotel = self.choose_house_hotel_to_buy()
+            road, house_or_hotel = self.choose_house_hotel_to_buy(interactive)
             if house_or_hotel == 'house' and self._bank['houses'] > 0 and self._dict_owned_houses_hotels[road][0] < 4:
                 house_price = self._dict_roads[road]['houses_cost']
                 if self.have_enough_money(house_price):
                     self.buy_house(road)
                 else:
-                    if self.want_to_mortgage_to_buy_house():
+                    if self.want_to_mortgage_to_buy_house(interactive):
                         if self._properties_total_mortgageable_amount + self._cash >= house_price:
                             self.get_money_from_mortgages(house_price)
                             self.buy_house(road)
@@ -855,14 +953,14 @@ class Player:
                 if self.have_enough_money(hotel_price):
                     self.buy_hotel(road)
                 else:
-                    if self.want_to_mortgage_to_buy_hotel():
+                    if self.want_to_mortgage_to_buy_hotel(interactive):
                         if self._properties_total_mortgageable_amount + self._cash >= hotel_price:
                             self.get_money_from_mortgages(hotel_price)
                             self.buy_hotel(road)
 
         # Unmortgage property
-        if self._properties_total_mortgageable_amount > 0 and self.want_to_unmortgage():
-            list_unmortgage_properties = self.choose_unmortgage_properties()
+        if any([len(self._list_mortgaged_roads), len(self._list_mortgaged_stations), len(self._list_mortgaged_utilities)]) and self.want_to_unmortgage(interactive):
+            list_unmortgage_properties = self.choose_unmortgage_properties(interactive)
             for property_type, property_name in list_unmortgage_properties:
                 self.unmortgage(property_name, property_type)
 
@@ -885,7 +983,7 @@ class Player:
 
             # Player decides to pay or wait in jail
             else:
-                if self.pay_jail_or_wait() == 'wait':
+                if self.pay_jail_or_wait(interactive) == 'wait':
                     self._jail_count += 1
                 else:
                     if self.have_enough_money(50):
@@ -905,7 +1003,7 @@ class Player:
                 pass
             elif property_owner is None:
                 if self.have_enough_money(dict_property_info['price']):
-                    buy_bid = self.buy_or_bid(dict_property_info)
+                    buy_bid = self.buy_or_bid(dict_property_info, interactive)
                     if buy_bid == 'buy' and board_cell_type == 'road':
                         self.buy(dict_property_info, property_name)
                     elif buy_bid == 'buy' and board_cell_type != 'road':
@@ -913,7 +1011,7 @@ class Player:
                     else:
                         self.bid(dict_property_info, 'temp')
                 elif self.have_enough_money(dict_property_info['price'], plus_mortgageable=True):
-                    mortgage_bid = self.mortgage_or_bid(dict_property_info)
+                    mortgage_bid = self.mortgage_or_bid(dict_property_info, interactive)
                     if mortgage_bid == 'mortgage':
                         self.mortgage_and_buy(dict_property_info, property_name, board_cell_type)
                     else:
