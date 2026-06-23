@@ -13,12 +13,14 @@ class Bank:
     def pay(self, amount):
         if amount < 0: raise ValueError
         self._cash += amount
+        return amount
 
     def withdraw(self, amount):
         if amount < 0: raise ValueError
         if amount > self._cash:
             raise InsufficientFundsAvailable
         self._cash -= amount
+        return amount
 
     """
     @property

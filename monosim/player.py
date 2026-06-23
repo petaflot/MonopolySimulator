@@ -10,8 +10,10 @@ from copy import copy
 #  from this list Check that attribute _properties_total_mortgageable_amount and _list_mortgaged_roads always sum up
 #  to the same value
 #  TODO Implement cards functionality (opportunity, etc.)
+from termcolor import cprint
 
 AUTO_BUY = True
+AUTO_OUTOFJAIL = True
 
 color_property_count = {
         'brown':        2,
@@ -32,7 +34,7 @@ class Player:
     _dict_owned_colors = {'brown': None, 'light_blue': None, 'purple': None, 'orange': None,
                                'red': None, 'yellow': None, 'green': None, 'blue': None}
 
-    def __init__(self, name, number, bank, list_board, dict_roads, dict_properties, community_cards_deck):
+    def __init__(self, name, number, bank, list_board, dict_roads, dict_properties, community_cards_deck, chance_cards_deck):
         self._name = name
         self._number = number
         self._list_board = list_board
@@ -41,13 +43,12 @@ class Player:
 
         self._position = 0
         self._dice_value = 0
-        self._cash = 15000
+        self._cash = 1500
         self._properties_total_mortgageable_amount = 0
-        self._exit_jail = False  # holds card to exit jail
+        self._player_cards = []
         self._jail_count = 0
         self._free_visit = False
         self._bank = bank
-        self._list_players = None
         self._dict_players = None
         self._list_owned_roads = []
         self._list_owned_stations = []
@@ -59,6 +60,7 @@ class Player:
         self._has_lost = False
         self.color_to_house_mapping = get_color_to_house_mapping()
         self.community_cards_deck = community_cards_deck
+        self.chance_cards_deck = chance_cards_deck
 
     @property
     def owned_colors(self):
@@ -83,7 +85,7 @@ class Player:
         return {'name': self._name, 'number': self._number, 'position': self._position,
                 'dice_value': self._dice_value, 'cash': self._cash,
                 'mortgageable_amount': self._properties_total_mortgageable_amount, 'jail_count': self._jail_count,
-                'exit_jail': self._exit_jail, 'free_visit': self._free_visit, 'owned_roads': self._list_owned_roads,
+                'player_cards': self._player_cards, 'free_visit': self._free_visit, 'owned_roads': self._list_owned_roads,
                 'owned_stations': self._list_owned_stations, 'owned_utilities': self._list_owned_utilities,
                 'mortgaged_roads': self._list_mortgaged_roads, 'mortgaged_stations': self._list_mortgaged_stations,
                 'mortgaged_utilities': self._list_mortgaged_utilities, 'owned_colors': self.owned_colors,
@@ -96,7 +98,7 @@ class Player:
 
         return f"""{self._name}, dice value {self._dice_value:>2}, cash {self._cash:>5}, mortgageable amount {self._properties_total_mortgageable_amount:>5}, in position {self._position:>2} ({self._list_board[self._position]['name']})
     owned_roads: {', '.join([f"{r} ({self._dict_roads[r]['color']})" if r not in self._list_mortgaged_roads else colored(r,'grey') for r in self._list_owned_roads])},
-    owned_utilities={self.get_owned_utilities_count()}, owned_stations={self.get_owned_stations_count()}, owned_houses={sum([i[0] for i in self._dict_owned_houses_hotels.values()]) -4*owned_hotels}, owned_hotels={owned_hotels}, {self.owned_colors = }"""
+    owned_roads={len(self._list_owned_roads)}, owned_utilities={self.get_owned_utilities_count()}, owned_stations={self.get_owned_stations_count()}, owned_houses={sum([i[0] for i in self._dict_owned_houses_hotels.values()]) -4*owned_hotels}, owned_hotels={owned_hotels}, {self.owned_colors = }"""
 
 
     def set_cash(self, amount):
@@ -108,11 +110,13 @@ class Player:
         :param list_players: (list) players objects of the other opponents
         :return:
         """
-        self._list_players = list_players.copy()
-        self._list_players.remove(self)
+        # TODO remove, this is redundant with _dict_players
+        list_players = list_players.copy()
+        list_players.remove(self)
 
         # dict of players easier/faster to use later
         self._dict_players = {player._name: player for player in list_players}
+        cprint(f"{self._name} {list(self._dict_players.keys())}",'magenta')
 
     def have_enough_money(self, amount, plus_mortgageable=False):
         """ Determine if the player has enough money. The required amount is passed as parameter (amount).
@@ -150,11 +154,17 @@ class Player:
         :return: None
         """
 
-        if amount > self._cash:
-            raise InsufficientFundsAvailable
-        # pay bank
-        self._bank.pay(amount)
-        self._cash -= amount
+        if amount < 0:
+            try:
+                self._cash += self._bank.withdraw(-amount)
+            except InsufficientFundsAvailable:
+                cprint('InsufficientFundsAvailable: bank is game over!','cyan')
+                exit(-1)
+        else:
+            if amount > self._cash:
+                raise InsufficientFundsAvailable
+            # pay bank
+            self._cash -= self._bank.pay(amount)
 
     def pay_tax(self, tax_amount):
         """ Pay tax. This is used when the player ends in a tax cell (income tax or super tax) or when the player
@@ -168,6 +178,7 @@ class Player:
             self.pay_bank(tax_amount)
         else:
             if not self.is_bankrupt(tax_amount):
+                # TODO check this is consistent
                 amount_required = tax_amount - self._cash
                 self.get_money_from_mortgages(amount_required)
                 self.pay_bank(tax_amount)
@@ -181,8 +192,14 @@ class Player:
         """
         opponent = self._dict_players[opponent_name]
         assert self._cash >= amount
+        cprint(f"{opponent_name} received {amount} from {self._name}",'green',)
         opponent._cash += amount
         self._cash -= amount
+
+    def pay_each_player(self, amount):
+        print(self._name, list(self._dict_players.keys()))
+        for o in self._dict_players.keys():
+            self.pay_opponent(o, amount)
 
     def buy(self, dict_road_info, road_name):
         """ Buy road
@@ -193,27 +210,26 @@ class Player:
         """
 
         road_price = dict_road_info['price']
-        # enough money?
-        if self._cash < road_price:
-            raise Exception('Player {} does not have enough money'.format(self._name))
-        # pay bank
-        self._bank.pay(road_price)
-        self._cash -= road_price
-        # exchange ownership
-        dict_road_info['belongs_to'] = self._name
-        self._list_owned_roads.append(road_name)
-        self._dict_owned_houses_hotels[road_name] = (0, 0)
-        # mortgage value
-        self._properties_total_mortgageable_amount += dict_road_info['mortgage_value']
+        try:
+            self.pay_bank(road_price)
+        except InsufficientFundsAvailable:
+            return
+        else:
+            # exchange ownership
+            dict_road_info['belongs_to'] = self._name
+            self._list_owned_roads.append(road_name)
+            self._dict_owned_houses_hotels[road_name] = (0, 0)
+            # mortgage value
+            self._properties_total_mortgageable_amount += dict_road_info['mortgage_value']
 
-        color = dict_road_info['color']
-        count_roads_of_color = 0
-        for road in self._list_owned_roads:
-            if color == self._dict_roads[road]['color']:
-                count_roads_of_color += 1
+            color = dict_road_info['color']
+            count_roads_of_color = 0
+            for road in self._list_owned_roads:
+                if color == self._dict_roads[road]['color']:
+                    count_roads_of_color += 1
 
-        if count_roads_of_color == color_property_count[color]:
-            self._dict_owned_colors[color] = self
+            if count_roads_of_color == color_property_count[color]:
+                self._dict_owned_colors[color] = self
 
     def buy_property(self, dict_property_info):
         """ Buy property (station or utility)
@@ -225,22 +241,21 @@ class Player:
         property_name = dict_property_info['name']
         property_type = dict_property_info['type']
 
-        # enough money?
-        if self._cash < property_price:
-            raise Exception('Player {} does not have enough money'.format(self._name))
-        # pay bank
-        self._bank.pay(property_price)
-        self._cash -= property_price
-        # exchange ownership
-        dict_property_info['belongs_to'] = self._name
-        if property_type == 'station':
-            self._list_owned_stations.append(property_name)
-        elif property_type == 'utility':
-            self._list_owned_utilities.append(property_name)
+        try:
+            self.pay_bank(property_price)
+        except InsufficientFundsAvailable:
+            return
         else:
-            raise Exception('Property type {} does not exist'.format(property_type))
-        # mortgage value
-        self._properties_total_mortgageable_amount += dict_property_info['mortgage_value']
+            # exchange ownership
+            dict_property_info['belongs_to'] = self._name
+            if property_type == 'station':
+                self._list_owned_stations.append(property_name)
+            elif property_type == 'utility':
+                self._list_owned_utilities.append(property_name)
+            else:
+                raise Exception('Property type {} does not exist'.format(property_type))
+            # mortgage value
+            self._properties_total_mortgageable_amount += dict_property_info['mortgage_value']
 
     def pay_rent(self, dict_property_info, amount):
         """ Pay the rent to the owner of the property.
@@ -326,8 +341,7 @@ class Player:
             raise Exception('Property type {} unknown'.format(property_type))
 
         self._properties_total_mortgageable_amount += mortgage_value
-        self._cash -= unmortgage_value
-        self._bank.withdraw(-unmortgage_value)
+        self.pay_bank(unmortgage_value)
 
     def choose_mortgage_properties(self, amount):
         """ Return a list of properties to mortgage given a required amount. This function
@@ -707,6 +721,7 @@ class Player:
                     else:
                         if self._dict_owned_colors[self._dict_roads[road]['color']]:
                             if sum(self._dict_owned_houses_hotels[road]) < 5:
+                                # TODO print cost for houses and hotels
                                 print(f"\t({len(l):>2}) ({self._dict_roads[road]['color']}) {road}: {houses=}, {hotels=}")
                                 l.append(road)
 
@@ -802,13 +817,11 @@ class Player:
         if self._dict_owned_houses_hotels[road][1]:
             amount = self._dict_roads[road]['hotels_cost'] / 2
             self._dict_owned_houses_hotels[road][1] -= 1
-            self._bank.withdraw(amount)
-            self._cash += amount
+            self._cash += self._bank.withdraw(amount)
         elif self._dict_owned_houses_hotels[road][0]:
             amount = self._dict_roads[road]['houses_cost']
             self._dict_owned_houses_hotels[road][0] -= 1
-            self._bank.withdraw(amount)
-            self._cash += amount
+            self._cash += self._bank.withdraw(amount)
         else:
             raise NothingHereToSell
 
@@ -838,9 +851,16 @@ class Player:
         else:
             return False
 
+    def go_to_go(self):
+        """ Move the player to the GO cell ; give him 200"""
+        # TODO remove, ensure self.go_to(0) works as expected
+        self._position = 10
+        self._cash += self._bank.withdraw(200)
+
     def go_to_jail(self):
         """ Move the player in the jail cell. Change player position to 10. Used when the player ends in the cell
             30 (go to jail) or when chances and opportunity cards say to do so."""
+        # TODO move to nearest jail, backwards or forwards
         self._position = 10
 
     def get_out_of_jail(self):
@@ -858,12 +878,12 @@ class Player:
             raise Exception('Player {} has been in jail for three consecutive rounds. Player has to pay and leave the'
                             'jail.')
 
-        if interactive:
-            return 'stay' if input("Do you want to got out of jail? ").lower() in ('y','yes') else 'wait'
-        else:
+        if AUTO_OUTOFJAIL or not interactive:
             return 'wait'
+        else:
+            return 'stay' if input("Do you want to got out of jail? ").lower() in ('y','yes') else 'wait'
 
-    def community_chest_street_repair(self):
+    def street_repairs(self, amounts):
         """ Implement logic for the community chest card "street repair", where the player has to pay 40 for each house
             and 115 for each hotel. The player looses the game if there are no enough money available (bankrupt).
 
@@ -877,8 +897,7 @@ class Player:
                 count_houses += n_houses
                 count_hotels += n_hotels
 
-        # 40 per house and 115 per hotel
-        total_required_amount = 40 * count_houses + 115 * count_hotels
+        total_required_amount = amounts[0] * count_houses + amounts[1] * count_hotels
 
         if self.have_enough_money(total_required_amount):
             self.pay_bank(total_required_amount)
@@ -888,52 +907,43 @@ class Player:
         else:
             self.is_bankrupt(total_required_amount)
 
-    def play_community_chest(self, board_cell_name):
-        """ Execute logic of the chosen community chest card.
 
-        :param board_cell_name: (string) name of the community chest card
-        :return:
-        """
+    def advance(self, distance):
+        """move forwards `distance` cells ; collect 200 if passing through GO"""
+        #cprint(f"advance {self._position} -> {(self._position + distance) % len(self._list_board)}", 'yellow')
+        self._position = (self._position + distance) % len(self._list_board)
 
-        if board_cell_name == 'street_repair':
-            self.community_chest_street_repair()
-        elif board_cell_name == 'stock_sale':
-            self._cash += 50
-        elif board_cell_name == 'holiday_fund':
-            self._cash += 100
-        elif board_cell_name == 'second_price':
-            self._cash += 100
-        elif board_cell_name == 'inherit':
-            self._cash += 100
-        elif board_cell_name == 'consultancy':
-            self._cash += 25
-        elif board_cell_name == 'income_tax':
-            self._cash += 20
-        elif board_cell_name == 'insurance':
-            self._cash += 100
-        elif board_cell_name == 'bank_error':
-            self._cash += 200
-        elif board_cell_name == 'hospital_fees' or board_cell_name == 'school_fees' or board_cell_name == 'doctor_fees':
-            amount_to_pay = 100 if board_cell_name == 'hospital_fees' else 50
-            self.pay_tax(amount_to_pay)
-        elif board_cell_name == 'jail':
-            self.go_to_jail
-        elif board_cell_name == 'to_go':
-            self._position = 0
-            self._cash += 200
+        # check if player passed Go. If yes, get 200 $
+        if self._position - self._dice_value < 0:
+            try:
+                self._cash += self._bank.withdraw(200)
+            except InsufficientFundsAvailable:
+                cprint('InsufficientFundsAvailable: bank is game over!','cyan')
+                exit(-1)
+            else:
+                cprint(f"GO: {self._name} collected 200", 'green')
 
+
+    def go_to(self, where):
+        if self._position > where: self._position -= len(self._list_board)
+        self.advance(where-self._position)
+
+
+    def advanceToNearest(self, what):
+        i = 0
+        while True:
+            i += 1
+            if self._list_board[(self._position+i)%len(self._list_board)]['type'] == what:
+                self.advance(i) # TODO hook for rent changes (see TODO in monosim/board.py)
+                return
 
     def play(self, interactive = False):
 
         tuple_dices = self.roll_dice()
         self._dice_value = tuple_dices[0] + tuple_dices[1]
-        if self._position != 10 or (self._position == 10 and self._free_visit):  # if player is not in jail
-            self._position = (self._position + self._dice_value) % len(self._list_board)
+        if self._position != 10 or (self._position == 10 and self._free_visit):  # TODO if player is not in jail
+            self.advance(self._dice_value)
             self._free_visit = True if self._position == 10 else False
-
-            # check if player passed Go. If yes, get 200 $
-            if self._position - self._dice_value < 0:
-                self._cash += 200
 
         board_cell = self._list_board[self._position]
         board_cell_type = board_cell['type']
@@ -1043,9 +1053,16 @@ class Player:
             self.go_to_jail()
 
         elif board_cell_type == 'community chest':
-            card_name = self.community_cards_deck[0]  # Choose top card
-            self.community_cards_deck.append(self.community_cards_deck.pop(0))  # Put top card at the bottom of the deck
-            self.play_community_chest(card_name)
+            self.community_cards_deck.discard( self.community_cards_deck.draw(self) )
+
+        elif board_cell_type == 'chance':
+            self.chance_cards_deck.discard( self.chance_cards_deck.draw(self) )
+
+        elif board_cell_type == 'jail':
+            pass
+
+        else:
+            raise ValueError(board_cell_type)
 
     @property
     def cash(self):

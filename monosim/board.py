@@ -617,23 +617,63 @@ def get_color_to_house_mapping():
     return dict_color_to_house_mapping
 
 
+from monosim.cards import Card, Deck
+
 def get_community_chest_cards():
 
-    return {"stock_sale": "FROM SALE OF STOCK YOU GET 50.",
-              "birthday": "IT'S YOUR BIRTHDAY. COLLECT 10 FROM EACH PLAYER.",
-              "holiday_fund": "HOLIDAY FUNC MATURES. COLLECT 100",
-              "hospital_fees": "HOSPITAL FEES. PAY 100.",
-              "second_price": "YOU HAVE WON SECOND PRIZE IN A BEAUTY CONTEST. COLLECT 100",
-              "school_fees": "SCHOOL FEES. PAY 50.",
-              "jail": "GO TO JAIL. GO DIRECTLY TO JAIL. DO NOT PASS GO. DO NOT COLLECT 200.",
-              "inherit": "YOU INHERIT 100.",
-              "consultancy": "COLLECT 25 CONSULTANCY FEE.",
-              "income_tax": "INCOME TAX REFUND. COLLECT 20.",
-              "insurance": "LIFE INSURANCE MATURES. COLLECT 100.",
-              "bank_error": "BANK ERROR IN YOUR FAVOUR. COLLECT 200.",
-              "doctor_fees": "DOCTOR'S FEES. PAY 50.",
-              "to_go": "ADVANCE TO GO. COLLECT 200.",
-              "street_repair": "YOU ARE ASSESSED FOR STREET REPAIRS: PAY 40 PER HOUSE AND 115 PER "
-                               "HOTEL YOU OWN.",
-              "out_of_jail": "GET OUT OF JAIL FREE. THIS CARD MAY BE KEPT UNTIL NEEDED, TRADED "
-                             "OR SOLD."}
+    return Deck('community chest', [
+        Card("stock_sale", "from sale of stock you get 50.", pay_bank=-50),
+        Card("birthday", "it's your birthday. collect 10 from each player.", pay_each_player = -10),
+        Card("holiday_fund", "holiday fund matures. collect 100", pay_bank=-100),
+        Card("hospital_fees", "hospital fees. pay 100.", pay_bank=100),
+        Card("second_price", "you have won second prize in a beauty contest. collect 100", pay_bank=-100),
+        Card("school_fees", "school fees. pay 50.", pay_bank=-50),
+        Card("jail", "go to jail. go directly to jail. do not pass go. do not collect 200.", action='go_to_jail'),
+        Card("inherit", "you inherit 100.", pay_bank=-100),
+        Card("consultancy", "collect 25 consultancy fee.", pay_bank=-25),
+        Card("income_tax", "income tax refund. collect 20.", pay_bank=-20),
+        Card("insurance", "life insurance matures. collect 100.", pay_bank=-100),
+        Card("bank_error", "bank error in your favour. collect 200.", pay_bank=-200),
+        Card("doctor_fees", "doctor's fees. pay 50.", pay_bank=-50),
+        Card("to_go", "advance to go. collect 200.", go_to = 0),
+        Card("street_repair", "you are assessed for street repairs: pay 40 per house and 115 per hotel you own.", street_repairs=(40,115)),
+        Card("out_of_jail", "get out of jail free. this card may be kept until needed, traded or sold.", action='chance_jail_card', uses_left = 1),
+    ])
+
+def get_chance_cards():
+    return Deck('chance deck', [
+        # classicedition
+        Card("out_of_jail", "GET OUT OF JAIL FREE. This card may be kept until needed or traded.", action = 'chance_jail_card', uses_left = 1),
+        Card("general_repairs", "Make General Repairs on All Your Property. For each house pay $25. For each hotel $100.", street_repairs = (25, 100)),
+        Card("speeding", "Speeding fine $15.", pay_bank = 15),
+        Card("election", "You have been elected chairman of the board. Pay each player $50.", pay_each_player = 50),
+        Card("back 3 spaces", "Go back three spaces.", advance = -3 ),
+        Card("advance_to_utility", "ADVANCE TO THE NEAREST UTILITY. IF UNOWNED, you may buy it from the Bank. IF OWNED, throw dice and pay owner a total ten times the amount thrown.", advanceToNearest = 'utility' ),
+        Card("dividend", "Bank pays you dividend of $50.", pay_bank = -50),
+        Card("advance_to_railroad", "ADVANCE TO THE NEAREST RAILROAD. If UNOWNED, you may buy it from the Bank. If OWNED, pay owner twice the rental to which they are otherwise entitled.", advanceToNearest= 'station' ), # TODO
+        Card("ppor_tax", "Pay poor tax of $15.", pay_bank = -15),
+        Card("goto_reading_rail", "Take a trip to Reading Rail Road. If you pass \"GO\" collect $200.", go_to = 5),
+        Card("advance", "ADVANCE to Boardwalk.", go_to = 39),
+        Card("advance", "ADVANCE to Illinois Avenue. If you pass \"GO\" collect $200.", go_to = 24),
+        Card("loan_matures", "Your building loan matures. Collect $150.", pay_bank = -150),
+        Card("advance_to_railroad", "ADVANCE TO THE NEAREST RAILROAD. If UNOWNED, you may buy it from the Bank. If OWNED, pay owner twice the rental to which they are otherwise entitled.", advanceToNearest = 'station' ),  # TODO
+        Card("advance", "ADVANCE to St. Charles Place. If you pass \"GO\" collect $200.", go_to = 11),
+        Card("go_to_jail", "Go to Jail. Go Directly to Jail. Do not pass \"GO\". Do not collect $200.", action = 'go_to_jail' ),
+        # new"", yorkcityedition
+        Card("chance_jail_card", "Get out of Jail free. This card may be kept until needed or sold.", action = 'chance_jail_card', uses_left = 1 ),
+        Card("street_repairs", "Make general repairs on all your property. For each house pay $25. For each hotel $100.", street_repairs = ( 25, 100 )),
+        Card("poor_tax", "Pay poor tax of $15.", pay_bank = 15),
+        Card("election", "You have been elected chairman of Con Edison. Pay each player $50.", pay_each_player = 50 ),
+        Card("back_3_spaces", "Go back 3 spaces.", advance = -3),
+        Card("", "Advance token to the nearest Con Edison utility. If UNOWNED you may buy it from the bank. If OWNED, throw dice and pay owner a total of ten times the amount thrown.", advanceToNearest = 'utility' ),   # TODO
+        Card("interest", "Citibank pays you interest of $50.", pay_bank = -50),
+        Card("advance_to_railroad", "Advance token to the nearest Transportation and pay owner Twice the Rental to which they are otherwise entitled. If Transportation is unowned, you may buy it from the Bank.", advanceToNearest = 'station' ),  # TODO
+        #Card("essex_walk", "Take a walk past The Essex House. Advance to GO. Collect $200.", 'advance', 0,32), # TODO
+        Card("regency_ride", "Take a ride to the Regency Hotel! If you pass GO collect $200.", go_to = 31),
+        Card("fifth_avenue", "Take a walk on fifth avenue. Advance token to Trump Tower.", go_to = 39),
+        Card("advance_to_13", "Advance to thirteen.", go_to = 13),
+        Card("mutual_funds", "Your Smith Barney mutual fund pays dividend. Collect $150.", pay_bank = -150),
+        Card("advance_to_railroad", "Advance token to the nearest Transportation and pay owner Twice the Rental to which they are otherwise entitled.\n\nIf Transportation is unowned, you may buy it from the Bank.", advanceToNearest = 'station'),    # TODO
+        Card("central_park", "Catch a bus to Central Park. If you pass GO, collect $200.", go_to =  9),
+        Card("go_to_jail", "Go directly to Jail. Do not pass GO, do not collect $200.", action = 'go_to_jail' ),
+    ])
