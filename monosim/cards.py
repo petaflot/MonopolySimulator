@@ -73,8 +73,6 @@ class Card:
 
     
     def use(self, player):
-        print(self.action, getattr(self,self.action, None), getattr(self,'pay_each_player', None))
-        
         try:
             getattr(player, self.action)( getattr(self, self.action) )
         except AttributeError:

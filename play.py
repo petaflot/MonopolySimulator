@@ -2,6 +2,7 @@
 from monosim.player import Player
 from monosim.bank import Bank
 from monosim.board import get_board, get_roads, get_properties, get_community_chest_cards, get_chance_cards
+from monosim.custom_exceptions import InsufficientFundsAvailable
 
 if __name__ == '__main__':
     import random
@@ -29,13 +30,17 @@ if __name__ == '__main__':
             player.meet_other_players(list_players)
 
 
-        idx_count = 0
-        while not any([player.has_lost() for player in list_players]) and idx_count < 2000:
-            #clear()
-            for player in list_players:
-                print(player.get_print_state())
-                player.play(interactive=True)
+        try:
+            idx_count = 0
+            while not any([player.has_lost() for player in list_players]) and idx_count < 2000:
                 #clear()
-                print(player.get_print_state(),end='\n\n')
-            sleep(.1)
-            idx_count += 1
+                for player in list_players:
+                    print(player.get_print_state())
+                    player.play(interactive=False)
+                    #clear()
+                    print(player.get_print_state(),end='\n\n')
+                sleep(.01)
+                idx_count += 1
+        except InsufficientFundsAvailable:
+            if input("play again? ").lower() not in ('y','yes'):
+                break

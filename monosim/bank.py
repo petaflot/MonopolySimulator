@@ -18,7 +18,7 @@ class Bank:
     def withdraw(self, amount):
         if amount < 0: raise ValueError
         if amount > self._cash:
-            raise InsufficientFundsAvailable
+            raise InsufficientFundsAvailable(amount)
         self._cash -= amount
         return amount
 
