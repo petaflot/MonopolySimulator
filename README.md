@@ -60,16 +60,12 @@ Players' behaviour can be changed modifying the class Player. Here's an example 
 
 In the example below, a player is modified so that it never buys brown roads.
 ```python
-def modify_buy(buy):
-    def _wrapper(self, dict_road_info, road_name):
+class Player_no_brown(Player):
+    def buy(self, dict_road_info, road_name):
         if dict_road_info['color'] == 'brown':
             pass
         else:
-            buy(self, dict_road_info, road_name)
-    return _wrapper
-
-class Player_no_brown(Player):
-    buy = modify_buy(Player.buy)
+            super().buy(dict_road_info, road_name)
 ```
 
 ## Examples

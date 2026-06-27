@@ -36,11 +36,13 @@ if __name__ == '__main__':
                 #clear()
                 for player in list_players:
                     print(player.get_print_state())
-                    player.play(interactive=False)
+                    player.play()
                     #clear()
                     print(player.get_print_state(),end='\n\n')
                 sleep(.01)
                 idx_count += 1
-        except InsufficientFundsAvailable:
+        except (InsufficientFundsAvailable, Exception) as e:
+            print(e)
+            raise
             if input("play again? ").lower() not in ('y','yes'):
                 break
