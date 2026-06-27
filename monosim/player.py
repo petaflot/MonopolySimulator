@@ -27,8 +27,9 @@ color_property_count = {
 }
 
 """
-    NOTE: for simplicity, houser count on a street stays at 4 if a hotel is built
+    NOTE: for algorithmic simplicity, house count on a street stays at 4 if a hotel is built
 """
+
 
 class Player:
     _dict_owned_colors = {'brown': None, 'light_blue': None, 'purple': None, 'orange': None,
@@ -97,7 +98,7 @@ class Player:
         owned_hotels = sum([i[1] for i in self._dict_owned_houses_hotels.values()])
 
         return f"""{self._name}, dice value {self._dice_value:>2}, cash {self._cash:>5}, mortgageable amount {self._properties_total_mortgageable_amount:>5}, in position {self._position:>2} ({self._list_board[self._position]['name']})
-    owned_roads: {', '.join([f"{r} ({self._dict_roads[r]['color']})" if r not in self._list_mortgaged_roads else colored(r,'grey') for r in self._list_owned_roads])},
+    owned_roads: {', '.join([f"{r} ({self._dict_roads[r].color})" if r not in self._list_mortgaged_roads else colored(r,'grey') for r in self._list_owned_roads])},
     owned_roads={len(self._list_owned_roads)}, owned_utilities={self.get_owned_utilities_count()}, owned_stations={self.get_owned_stations_count()}, owned_houses={sum([i[0] for i in self._dict_owned_houses_hotels.values()]) -4*owned_hotels}, owned_hotels={owned_hotels}, {self.owned_colors = }"""
 
 
@@ -131,12 +132,13 @@ class Player:
         if plus_mortgageable:
             return amount <= self.cash + self._properties_total_mortgageable_amount
         else:
-            print(f"{amount=} {self._cash=}")
+            print(f"have_enough_money({amount=})={amount <= self._cash} {self._cash=}")
 
             return amount <= self._cash
 
     def buy_or_bid(self, dict_road_info):
         """ Determine whether to buy or to bid the road"""
+        return 'buy'
         match dict_road_info['type']:
             case 'road':
                 return 'buy' if input(f"Do you want to buy '{dict_road_info['name']}' ({dict_road_info['color']}) for {dict_road_info['price']}? ").lower() in ('y','yes') else 'pass'
@@ -201,7 +203,7 @@ class Player:
         :return:
         """
 
-        road_price = dict_road_info['price']
+        road_price = dict_road_info.price
         try:
             self.pay_bank(road_price)
         except InsufficientFundsAvailable:
@@ -211,16 +213,16 @@ class Player:
                 raise
         else:
             # exchange ownership
-            dict_road_info['belongs_to'] = self._name
+            dict_road_info.belongs_to = self._name
             self._list_owned_roads.append(road_name)
             self._dict_owned_houses_hotels[road_name] = (0, 0)
             # mortgage value
-            self._properties_total_mortgageable_amount += dict_road_info['mortgage_value']
+            self._properties_total_mortgageable_amount += dict_road_info.mortgage_value
 
-            color = dict_road_info['color']
+            color = dict_road_info.color
             count_roads_of_color = 0
             for road in self._list_owned_roads:
-                if color == self._dict_roads[road]['color']:
+                if color == self._dict_roads[road].color:
                     count_roads_of_color += 1
 
             if count_roads_of_color == color_property_count[color]:
@@ -232,9 +234,9 @@ class Player:
         :param dict_property_info: (dictionary) Property information
         :return:
         """
-        property_price = dict_property_info['price']
-        property_name = dict_property_info['name']
-        property_type = dict_property_info['type']
+        property_price = dict_property_info.price
+        property_name = dict_property_info.name
+        property_type = dict_property_info.type
 
         try:
             self.pay_bank(property_price)
@@ -245,7 +247,7 @@ class Player:
                 raise
         else:
             # exchange ownership
-            dict_property_info['belongs_to'] = self._name
+            dict_property_info.belongs_to = self._name
             if property_type == 'station':
                 self._list_owned_stations.append(property_name)
             elif property_type == 'utility':
@@ -253,7 +255,7 @@ class Player:
             else:
                 raise Exception('Property type {} does not exist'.format(property_type))
             # mortgage value
-            self._properties_total_mortgageable_amount += dict_property_info['mortgage_value']
+            self._properties_total_mortgageable_amount += dict_property_info.mortgage_value
 
     def pay_rent(self, dict_property_info, amount):
         """ Pay the rent to the owner of the property.
@@ -263,7 +265,7 @@ class Player:
         :return:
         """
 
-        opponent_name = dict_property_info['belongs_to']
+        opponent_name = dict_property_info.belongs_to
         self.pay_opponent(opponent_name, amount)
 
     def bid(self, dict_road_info, player_offer):
@@ -275,27 +277,27 @@ class Player:
         """ Determine whether to mortgage (to buy) or bid"""
         # This function is incomplete. In reality, the player should decide whether to mortgage or bid to try buuying
         # the road at a lower (available) price.
-        return 'mortgage' if input(f"Do you want to buy and mortgage '{dict_road_info['name']}'? ").lower() in ('y','yes') else 'pass'
+        return 'mortgage' if input(f"Do you want to buy and mortgage '{dict_road_info.name}'? ").lower() in ('y','yes') else 'pass'
 
     def mortgage(self, property_name, property_type):
 
         if property_type == 'station':
             if property_name not in self._list_owned_stations:
                 raise Exception('Station {} not owned by player {}'.format(property_name, self._name))
-            self._dict_properties[property_name]['is_mortgaged'] = True
-            mortgage_value = self._dict_properties[property_name]['mortgage_value']
+            self._dict_properties[property_name].is_mortgaged = True
+            mortgage_value = self._dict_properties[property_name].mortgage_value
             self._list_mortgaged_stations.append(property_name)
         elif property_type == 'utility':
             if property_name not in self._list_owned_utilities:
                 raise Exception('Utility {} not owned by player {}'.format(property_name, self._name))
             self._dict_properties[property_name]['is_mortgaged'] = True
-            mortgage_value = self._dict_properties[property_name]['mortgage_value']
+            mortgage_value = self._dict_properties[property_name].mortgage_value
             self._list_mortgaged_utilities.append(property_name)
         elif property_type == 'road':
             if property_name not in self._list_owned_roads:
                 raise Exception('Road {} not owned by player {}'.format(property_name, self._name))
-            self._dict_roads[property_name]['is_mortgaged'] = True
-            mortgage_value = self._dict_roads[property_name]['mortgage_value']
+            self._dict_roads[property_name].is_mortgaged = True
+            mortgage_value = self._dict_roads[property_name].mortgage_value
             self._list_mortgaged_roads.append(property_name)
         else:
             raise Exception('Property type {} unknown'.format(property_type))
@@ -314,23 +316,23 @@ class Player:
         if property_type == 'road':
             if property_name not in self._list_mortgaged_roads:
                 raise Exception('Road {} not mortgaged by player {}'.format(property_name, self._name))
-            self._dict_roads[property_name]['is_mortgaged'] = False
-            unmortgage_value = self._dict_roads[property_name]['unmortgage_value']
-            mortgage_value = self._dict_roads[property_name]['mortgage_value']
+            self._dict_roads[property_name].is_mortgaged = False
+            unmortgage_value = self._dict_roads[property_name].unmortgage_value
+            mortgage_value = self._dict_roads[property_name].mortgage_value
             self._list_mortgaged_roads.remove(property_name)
         elif property_type == 'utility':
             if property_name not in self._list_mortgaged_utilities:
                 raise Exception('Utility {} not mortgaged by player {}'.format(property_name, self._name))
-            self._dict_properties[property_name]['is_mortgaged'] = False
-            unmortgage_value = self._dict_properties[property_name]['unmortgage_value']
-            mortgage_value = self._dict_properties[property_name]['mortgage_value']
+            self._dict_properties[property_name].is_mortgaged = False
+            unmortgage_value = self._dict_properties[property_name].unmortgage_value
+            mortgage_value = self._dict_properties[property_name].mortgage_value
             self._list_mortgaged_utilities.remove(property_name)
         elif property_type == 'station':
             if property_name not in self._list_mortgaged_stations:
                 raise Exception('Station {} not mortgaged by player {}'.format(property_name, self._name))
-            self._dict_properties[property_name]['is_mortgaged'] = False
-            unmortgage_value = self._dict_properties[property_name]['unmortgage_value']
-            mortgage_value = self._dict_properties[property_name]['mortgage_value']
+            self._dict_properties[property_name].is_mortgaged = False
+            unmortgage_value = self._dict_properties[property_name].unmortgage_value
+            mortgage_value = self._dict_properties[property_name].mortgage_value
             self._list_mortgaged_stations.remove(property_name)
         else:
             raise Exception('Property type {} unknown'.format(property_type))
@@ -346,41 +348,34 @@ class Player:
         :param amount: (int) Amount required
         :return: (list) list of tuples (property_type, property_name)
         """
-        # Note: this function is in reality more complex. This is just a temporary logic
-        # until a more "intelligent" logic is built.
+        dict_mortgage_properties = {}
+        dict_mortgage_properties |= {self._dict_roads[name]:False for name in self._list_owned_roads if self._dict_roads[name].is_mortgaged is False}
+        dict_mortgage_properties |= {self._dict_properties[name]:False for name in self._list_owned_stations if self._dict_properties[name].is_mortgaged is False}
+        dict_mortgage_properties |= {self._dict_properties[name]:False for name in self._list_owned_utilities if self._dict_properties[name].is_mortgaged is False}
 
-        list_mortgageable_roads = [('road', road_name, self._dict_roads[road_name]['mortgage_value'])
-                                   for road_name in self._list_owned_roads
-                                   if self._dict_roads[road_name]['is_mortgaged'] is False]
-        list_mortgageable_stations = [('station', station_name, self._dict_properties[station_name]['mortgage_value'])
-                                      for station_name in self._list_owned_stations
-                                      if self._dict_properties[station_name]['is_mortgaged'] is False]
-        list_mortgageable_utilities = [('utility', utility_name, self._dict_properties[utility_name]['mortgage_value'])
-                                       for utility_name in self._list_owned_utilities
-                                       if self._dict_properties[utility_name]['is_mortgaged'] is False]
+        def list_preselection():
+            i, a = 0, 0
+            for p, v in dict_mortgage_properties.items():
+                cprint(f"\t{i:>2}: {p.name:<10} ({p.mortgage_value})",'white' if v else None)
+                if v: a = a+p.mortgage_value
+                i += 1
+            print(f"Total amount from selection mortgage: {a} (cash after: {self._cash+a})")
+
+        list_preselection()
+
+        while True:
+            while True:
+                try:
+                    p = list(dict_mortgage_properties.keys())[int(input("Select property to mortgage: "))]
+                    dict_mortgage_properties[p] = not dict_mortgage_properties[p]
+                except (IndexError, ValueError):
+                    break
+            list_preselection()
+            if input('OK? ').lower() in ('y', 'yes'):
+                return [(p.type, p.name) for p, v in dict_mortgage_properties.items() if dict_mortgage_properties[p]]
 
 
-        list_mortgageable_properties = list_mortgageable_roads + list_mortgageable_stations + list_mortgageable_utilities
-        print(amount, list_mortgageable_properties)
-
-        if len(list_mortgageable_properties) == 0:
-            raise Exception('player {} has no properties to mortgage'.format(self._name))
-
-        idx_property = 1
-        mortgage_value = 0
-        list_properties = []
-        while (mortgage_value < amount) and (idx_property <= len(list_mortgageable_properties)):
-            tuple_tmp = (list_mortgageable_properties[idx_property - 1][0], list_mortgageable_properties[idx_property - 1][1])
-            list_properties.append(tuple_tmp)
-            mortgage_value += list_mortgageable_properties[idx_property - 1][2]
-            idx_property += 1
-
-        if mortgage_value < amount:
-            raise Exception('player {} total mortgageable amount is insufficient'.format(self._name))
-
-        return list_properties
-
-    def choose_unmortgage_properties(self, interactive = False):
+    def choose_unmortgage_properties(self):
         """ Return a list of properties to unmortgage given the available cash.
 
         Example: if player owns 130 and owns 'old kent road' (unmortgage value 33) and 'kings cross station'
@@ -391,28 +386,32 @@ class Player:
 
         :return: (list) list of tuples (property_type, property_name)
         """
-        if interactive:
-            print("NotImplementedError")
-        else:
-            total_unmortgage_value = 0
-            list_unmortgage_properties = []
-            for road_name in self._list_mortgaged_roads:
-                unmortgage_value = self._dict_roads[road_name]['unmortgage_value']
-                if unmortgage_value + total_unmortgage_value < self._cash:
-                    list_unmortgage_properties.append(('road', road_name))
-                    total_unmortgage_value += unmortgage_value
-            for station_name in self._list_mortgaged_stations:
-                unmortgage_value = self._dict_properties[station_name]['unmortgage_value']
-                if unmortgage_value + total_unmortgage_value < self._cash:
-                    list_unmortgage_properties.append(('station', station_name))
-                    total_unmortgage_value += unmortgage_value
-            for utility_name in self._list_mortgaged_utilities:
-                unmortgage_value = self._dict_properties[utility_name]['unmortgage_value']
-                if unmortgage_value + total_unmortgage_value < self._cash:
-                    list_unmortgage_properties.append(('utility', utility_name))
-                    total_unmortgage_value += unmortgage_value
+        dict_unmortgage_properties = {}
+        dict_unmortgage_properties |= {self._dict_roads[name]:False for name in self._list_mortgaged_roads}
+        dict_unmortgage_properties |= {self._dict_properties[name]:False for name in self._list_mortgaged_stations}
+        dict_unmortgage_properties |= {self._dict_properties[name]:False for name in self._list_mortgaged_utilities}
 
-        return list_unmortgage_properties
+        def list_preselection():
+            i, a = 0, 0
+            for p, v in dict_unmortgage_properties.items():
+                cprint(f"\t{i:>2}: {p.name:<10} ({p.unmortgage_value})",'white' if v else None)
+                if v: a = a+p.unmortgage_value
+                i += 1
+            print(f"Total amount to unmortgage selection: {a} (available cash: {self._cash-a})")
+
+        list_preselection()
+
+        while True:
+            while True:
+                try:
+                    p = list(dict_unmortgage_properties.keys())[int(input("Select property to unmortgage: "))]
+                    dict_unmortgage_properties[p] = not dict_unmortgage_properties[p]
+                except (IndexError, ValueError):
+                    break
+            list_preselection()
+            if input('OK? ').lower() in ('y', 'yes'):
+                return [(p.type, p.name) for p, v in dict_unmortgage_properties.items() if dict_unmortgage_properties[p]]
+
 
     def get_money_from_mortgages(self, amount_required):
         """ Mortgage the necessary (owned) properties to get the amount of money required.
@@ -429,12 +428,11 @@ class Player:
         #  choose properties to mortgage
         list_properties = self.choose_mortgage_properties(amount_required)
 
-        cprint(f"***\nMortgaging list:", 'yellow')
         #  mortgage properties
         for property in list_properties:
             self.mortgage(property[1], property[0])
-        cprint(f"***", 'yellow')
 
+    '''
     def mortgage_and_pay_rent(self, dict_property_info):
         """ Mortgage the necessary properties to pay the rent for the given property.
 
@@ -458,6 +456,7 @@ class Player:
             self.mortgage(property[1], property[0])
 
         self.pay_rent(dict_property_info, property_rent)
+    '''
 
     def mortgage_and_buy(self, dict_property_info, property_name, property_type):
         """ Mortgage the necessary properties to buy the given property
@@ -468,11 +467,10 @@ class Player:
             :return:
         """
 
-        property_price = dict_property_info['price']
+        property_price = dict_property_info.price
         amount_required = property_price - self._cash
         self.get_money_from_mortgages(amount_required)
 
-        # self.get_money_from_mortgages(dict_property_info)
         if property_type == 'road':
             self.buy(dict_property_info, property_name)
         elif property_type == 'station' or property_type == 'utility':
@@ -541,25 +539,25 @@ class Player:
         NOTE this should be in monosim.board !
         """
 
-        opponent_name = dict_property_info['belongs_to']
+        opponent_name = dict_property_info.belongs_to
         if opponent_name is None:
-            raise Exception('{} does not belong to anyone'.format(dict_property_info['name']))
+            raise Exception('{} does not belong to anyone'.format(dict_property_info.name))
         opponent = self._dict_players[opponent_name]
-        property_name = dict_property_info['name']
+        property_name = dict_property_info.name
 
-        road_color = dict_property_info['color']
+        road_color = dict_property_info.color
         if opponent.has_all_roads_of_color(road_color):
             houses, hotel = opponent.get_houses_hotel_count(property_name)
             if hotel == 0 and houses == 0:
-                rent = dict_property_info['rent_with_color_set']
+                rent = dict_property_info.rent_with_color_set
             else:
                 try:
-                    rent = dict_property_info['rent_with_{}_houses_{}_hotels'.format(houses, hotel)]
+                    rent = getattr( dict_property_info, 'rent_with_{}_houses_{}_hotels'.format(houses, hotel))
                 except KeyError:
                     print(dict_property_info.keys())
                     raise
         else:
-            rent = dict_property_info['rent']
+            rent = dict_property_info.rent
 
         return rent
 
@@ -573,13 +571,13 @@ class Player:
         NOTE this should be in monosim.board !
         """
 
-        opponent_name, property_name = dict_property_info['belongs_to'], dict_property_info['name']
+        opponent_name, property_name = dict_property_info.belongs_to, dict_property_info.name
         if opponent_name is None:
-            raise Exception('{} does not belong to anyone'.format(dict_property_info['name']))
+            raise Exception('{} does not belong to anyone'.format(dict_property_info.name))
         opponent = self._dict_players[opponent_name]
         num_of_stations = opponent.get_owned_stations_count()
 
-        if dict_property_info['type'] != 'station':
+        if dict_property_info.type != 'station':
             raise Exception('Property type must be of type "station"')
 
         if num_of_stations == 1:
@@ -604,13 +602,13 @@ class Player:
         NOTE this should be in monosim.board !
         """
 
-        opponent_name, property_name = dict_property_info['belongs_to'], dict_property_info['name']
+        opponent_name, property_name = dict_property_info.belongs_to, dict_property_info.name
         if opponent_name is None:
-            raise Exception('{} does not belong to anyone'.format(dict_property_info['name']))
+            raise Exception('{} does not belong to anyone'.format(dict_property_info.name))
         opponent = self._dict_players[opponent_name]
         num_of_utilities = opponent.get_owned_utilities_count()
 
-        if dict_property_info['type'] != 'utility':
+        if dict_property_info.type != 'utility':
             raise Exception('Property type must be of type "utility"')
 
         if num_of_utilities == 1:
@@ -627,13 +625,13 @@ class Player:
         :param dict_property_info:  (dict) property information
         :return: (int) Rent amount
 
-        NOTE this should be in monosim.board !
+        NOTE this should be in monosim.property !
         """
-        if dict_property_info['type'] == 'road':
+        if dict_property_info.type == 'road':
             property_rent = self.estimate_rent_road(dict_property_info)
-        elif dict_property_info['type'] == 'station':
+        elif dict_property_info.type == 'station':
             property_rent = self.estimate_rent_station(dict_property_info)
-        elif dict_property_info['type'] == 'utility':
+        elif dict_property_info.type == 'utility':
             property_rent = self.estimate_rent_utility(dict_property_info)
         else:
             raise Exception('Property type not recognized')
@@ -651,6 +649,7 @@ class Player:
         else:
             self.get_money_from_mortgages(value_to_pay)
             
+        print(f"is_bankrupt({self._name}, {value_to_pay}): {self._cash} {self._has_lost=}")
         return self._has_lost
 
     def get_tax_value(self, tax_type):
@@ -672,6 +671,7 @@ class Player:
 
             :return: (bool) True if player decides to buy a house or a hotel.
         """
+        return False
         for color in self.owned_colors:
             for road in self.color_to_house_mapping[color]:
                 try:
@@ -925,7 +925,7 @@ class Player:
                             self.get_money_from_mortgages(hotel_price)
                             self.buy_hotel(road)
 
-        # Unmortgage property
+        # Unmortgage property # TODO check for sufficient cash
         if any([len(self._list_mortgaged_roads), len(self._list_mortgaged_stations), len(self._list_mortgaged_utilities)]) and self.want_to_unmortgage():
             list_unmortgage_properties = self.choose_unmortgage_properties()
             for property_type, property_name in list_unmortgage_properties:
@@ -965,11 +965,11 @@ class Player:
             elif board_cell_type == 'road' or board_cell_type == 'station' or board_cell_type == 'utility':
                 property_name = board_cell['name']
                 dict_property_info = self._dict_roads[property_name] if board_cell_type == 'road' else self._dict_properties[property_name]
-                property_owner = dict_property_info['belongs_to']
+                property_owner = dict_property_info.belongs_to
                 if property_name in self._list_owned_roads or property_name in self._list_owned_stations or property_name in self._list_owned_utilities:
                     pass
                 elif property_owner is None:
-                    if self.have_enough_money(dict_property_info['price']):
+                    if self.have_enough_money(dict_property_info.price):
                         buy_bid = self.buy_or_bid(dict_property_info)
                         if buy_bid == 'buy' and board_cell_type == 'road':
                             self.buy(dict_property_info, property_name)
@@ -977,7 +977,7 @@ class Player:
                             self.buy_property(dict_property_info)
                         else:
                             self.bid(dict_property_info, 'temp')
-                    elif self.have_enough_money(dict_property_info['price'], plus_mortgageable=True):
+                    elif self.have_enough_money(dict_property_info.price, plus_mortgageable=True):
                         mortgage_bid = self.mortgage_or_bid(dict_property_info)
                         if mortgage_bid == 'mortgage':
                             self.mortgage_and_buy(dict_property_info, property_name, board_cell_type)
@@ -986,17 +986,17 @@ class Player:
                     else:
                         # Players with no money should bid
                         self.bid(dict_property_info, 'temp')
-                elif property_owner is not None and dict_property_info['is_mortgaged'] is False:
+                elif property_owner is not None and dict_property_info.is_mortgaged is False:
                     # Have enough money to rent?
                     rent = self.estimate_rent(dict_property_info)
-                    print(f"WHUT? {self.have_enough_money(rent)=} {rent}")
-                    if self.have_enough_money(rent):  # TODO should it check money + mortgageable amount?
+                    if self.have_enough_money(rent):
                         self.pay_rent(dict_property_info, rent)
                     else:
                         if not self.is_bankrupt(rent):
-                            print(f"WHIT? {self.is_bankrupt(rent)=} {rent}")
-                            self.mortgage_and_pay_rent(dict_property_info)
-                    # self.make_offer(road_owner)  # This should be possible at any time in the game...
+                            self.pay_rent(dict_property_info, rent)
+                            #self.mortgage_and_pay_rent(dict_property_info) redundancy with self.is_bankrupt()
+
+                    # self.make_offer(road_owner)  # TODO This should be possible at any time in the game...
 
             elif board_cell_type == 'go' or board_cell_type == 'free parking':
                 pass
@@ -1034,7 +1034,11 @@ class Player:
     def has_lost(self):
         return self._has_lost
 
+
 class PlayerBot(Player):
+    """
+        a bot that takes decisions on its own, requiring no human interaction
+    """
     def buy_or_bid(self, dict_road_info):
         """ Determine whether to buy or to bid the road"""
             # TODO placeholder. To implement.
@@ -1046,8 +1050,59 @@ class PlayerBot(Player):
         # the road at a lower (available) price.
         return 'mortgage'
 
+    def choose_mortgage_properties(self, amount):
+        # Note: this function is in reality more complex. This is just a temporary logic
+        # until a more "intelligent" logic is built.
+        list_mortgageable_roads = [('road', road_name, self._dict_roads[road_name].mortgage_value)
+                                   for road_name in self._list_owned_roads
+                                   if self._dict_roads[road_name].is_mortgaged is False]
+        list_mortgageable_stations = [('station', station_name, self._dict_properties[station_name].mortgage_value)
+                                      for station_name in self._list_owned_stations
+                                      if self._dict_properties[station_name].is_mortgaged is False]
+        list_mortgageable_utilities = [('utility', utility_name, self._dict_properties[utility_name].mortgage_value)
+                                       for utility_name in self._list_owned_utilities
+                                       if self._dict_properties[utility_name].is_mortgaged is False]
 
-    #def choose_unmortgage_properties(self):
+
+        list_mortgageable_properties = list_mortgageable_roads + list_mortgageable_stations + list_mortgageable_utilities
+
+        if len(list_mortgageable_properties) == 0:
+            raise Exception('player {} has no properties to mortgage'.format(self._name))
+
+        idx_property = 1
+        mortgage_value = 0
+        list_properties = []
+        while (mortgage_value < amount) and (idx_property <= len(list_mortgageable_properties)):
+            tuple_tmp = (list_mortgageable_properties[idx_property - 1][0], list_mortgageable_properties[idx_property - 1][1])
+            list_properties.append(tuple_tmp)
+            mortgage_value += list_mortgageable_properties[idx_property - 1][2]
+            idx_property += 1
+
+        if mortgage_value < amount:
+            raise Exception('player {} total mortgageable amount is insufficient'.format(self._name))
+
+        return list_properties
+
+    def choose_unmortgage_properties(self):
+        total_unmortgage_value = 0
+        list_unmortgage_properties = []
+        for road_name in self._list_mortgaged_roads:
+            unmortgage_value = self._dict_roads[road_name].unmortgage_value
+            if unmortgage_value + total_unmortgage_value < self._cash:
+                list_unmortgage_properties.append(('road', road_name))
+                total_unmortgage_value += unmortgage_value
+        for station_name in self._list_mortgaged_stations:
+            unmortgage_value = self._dict_properties[station_name].unmortgage_value
+            if unmortgage_value + total_unmortgage_value < self._cash:
+                list_unmortgage_properties.append(('station', station_name))
+                total_unmortgage_value += unmortgage_value
+        for utility_name in self._list_mortgaged_utilities:
+            unmortgage_value = self._dict_properties[utility_name].unmortgage_value
+            if unmortgage_value + total_unmortgage_value < self._cash:
+                list_unmortgage_properties.append(('utility', utility_name))
+                total_unmortgage_value += unmortgage_value
+
+        return list_unmortgage_properties
 
     def want_to_buy_house_hotel(self):
         # Note: this function is in reality more complex. This is just a temporary logic
@@ -1100,7 +1155,6 @@ class PlayerBot(Player):
         # Note: For now we do not allow the player to mortgage properties to buy hotels. This is just a placeholder
         # function for now. We will consider more complex logics in the future.
         return False
-
 
     def pay_to_exit_jail(self):
         return False

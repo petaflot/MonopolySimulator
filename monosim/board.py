@@ -83,10 +83,12 @@ def get_board():
     return list_board
 
 
+from monosim.property import Property, Road
+
 def get_roads():
 
     dict_roads = {
-        'old kent road': {
+        'old kent road': Road(kwargs = {
             'name': 'old kent road',
             'type': 'road',
             'price': 60,
@@ -104,8 +106,8 @@ def get_roads():
             'color': 'brown',
             'board_num': 1,
             'belongs_to': None,
-            'is_mortgaged': False},
-        'whitechapel road': {
+            'is_mortgaged': False}),
+        'whitechapel road': Road(kwargs = {
             'name': 'whitechapel road',
             'type': 'road',
             'price': 60,
@@ -124,8 +126,8 @@ def get_roads():
             'board_num': 3,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'the angel islington': {
+        }),
+        'the angel islington': Road(kwargs = {
             'name': 'the angel islington',
             'type': 'road',
             'price': 100,
@@ -144,8 +146,8 @@ def get_roads():
             'board_num': 6,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'euston road': {
+        }),
+        'euston road': Road(kwargs = {
             'name': 'euston road',
             'type': 'road',
             'price': 100,
@@ -164,8 +166,8 @@ def get_roads():
             'board_num': 8,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'pentonville road': {
+        }),
+        'pentonville road': Road(kwargs = {
             'name': 'pentonville road',
             'type': 'road',
             'price': 120,
@@ -184,8 +186,8 @@ def get_roads():
             'board_num': 9,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'pall mall': {
+        }),
+        'pall mall': Road(kwargs = {
             'name': 'pall mall',
             'type': 'road',
             'price': 140,
@@ -204,8 +206,8 @@ def get_roads():
             'board_num': 11,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'whitehall': {
+        }),
+        'whitehall': Road(kwargs = {
             'name': 'whitehall',
             'type': 'road',
             'price': 140,
@@ -224,8 +226,8 @@ def get_roads():
             'board_num': 13,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'northumberland avenue': {
+        }),
+        'northumberland avenue': Road(kwargs = {
             'name': 'northumberland avenue',
             'type': 'road',
             'price': 160,
@@ -244,8 +246,8 @@ def get_roads():
             'board_num': 14,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'bow street': {
+        }),
+        'bow street': Road(kwargs = {
             'name': 'bow street',
             'type': 'road',
             'price': 180,
@@ -264,8 +266,8 @@ def get_roads():
             'board_num': 16,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'marlborough street': {
+        }),
+        'marlborough street': Road(kwargs = {
             'name': 'marlborough street',
             'type': 'road',
             'price': 180,
@@ -284,8 +286,8 @@ def get_roads():
             'board_num': 18,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'vine street': {
+        }),
+        'vine street': Road(kwargs = {
             'name': 'vine street',
             'type': 'road',
             'price': 200,
@@ -304,8 +306,8 @@ def get_roads():
             'board_num': 19,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'strand': {
+        }),
+        'strand': Road(kwargs = {
             'name': 'strand',
             'type': 'road',
             'price': 220,
@@ -324,8 +326,8 @@ def get_roads():
             'board_num': 21,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'fleet street': {
+        }),
+        'fleet street': Road(kwargs = {
             'name': 'fleet street',
             'type': 'road',
             'price': 220,
@@ -344,8 +346,8 @@ def get_roads():
             'board_num': 23,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'trafalgar square': {
+        }),
+        'trafalgar square': Road(kwargs = {
             'name': 'trafalgar square',
             'type': 'road',
             'price': 240,
@@ -364,8 +366,8 @@ def get_roads():
             'board_num': 24,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'leicester square': {
+        }),
+        'leicester square': Road(kwargs = {
             'name': 'leicester square',
             'type': 'road',
             'price': 260,
@@ -384,8 +386,8 @@ def get_roads():
             'board_num': 26,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'coventry street': {
+        }),
+        'coventry street': Road(kwargs = {
             'name': 'coventry street',
             'type': 'road',
             'price': 260,
@@ -404,8 +406,8 @@ def get_roads():
             'board_num': 27,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'piccadilly': {
+        }),
+        'piccadilly': Road(kwargs = {
             'name': 'piccadilly',
             'type': 'road',
             'price': 280,
@@ -424,8 +426,8 @@ def get_roads():
             'board_num': 29,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'regent street': {
+        }),
+        'regent street': Road(kwargs = {
             'name': 'regent street',
             'type': 'road',
             'price': 300,
@@ -444,8 +446,8 @@ def get_roads():
             'board_num': 31,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'oxford street': {
+        }),
+        'oxford street': Road(kwargs = {
             'name': 'oxford street',
             'type': 'road',
             'price': 300,
@@ -464,8 +466,8 @@ def get_roads():
             'board_num': 32,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'bond street': {
+        }),
+        'bond street': Road(kwargs = {
             'name': 'bond street',
             'type': 'road',
             'price': 320,
@@ -484,8 +486,8 @@ def get_roads():
             'board_num': 34,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'park lane': {
+        }),
+        'park lane': Road(kwargs = {
             'name': 'park lane',
             'type': 'road',
             'price': 350,
@@ -504,8 +506,8 @@ def get_roads():
             'board_num': 37,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'mayfair': {
+        }),
+        'mayfair': Road(kwargs = {
             'name': 'mayfair',
             'type': 'road',
             'price': 400,
@@ -524,7 +526,7 @@ def get_roads():
             'board_num': 39,
             'belongs_to': None,
             'is_mortgaged': False
-        },
+        }),
     }
     return dict_roads
 
@@ -532,7 +534,7 @@ def get_roads():
 def get_properties():
 
     dict_properties = {
-        'kings cross station': {
+        'kings cross station': Property(kwargs = {
             'name': 'kings cross station',
             'type': 'station',
             'price': 200,
@@ -542,8 +544,8 @@ def get_properties():
             'board_num': 5,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'marylebone station': {
+        }),
+        'marylebone station': Property(kwargs = {
             'name': 'marylebone station',
             'type': 'station',
             'price': 200,
@@ -553,8 +555,8 @@ def get_properties():
             'board_num': 15,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'Fenchurch st. station': {
+        }),
+        'Fenchurch st. station': Property(kwargs = {
             'name': 'Fenchurch st. station',
             'type': 'station',
             'price': 200,
@@ -564,8 +566,8 @@ def get_properties():
             'board_num': 25,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'liverpool st station': {
+        }),
+        'liverpool st station': Property(kwargs = {
             'name': 'liverpool st station',
             'type': 'station',
             'price': 200,
@@ -575,8 +577,8 @@ def get_properties():
             'board_num': 35,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'Electric company': {
+        }),
+        'Electric company': Property(kwargs = {
             'name': 'Electric company',
             'type': 'utility',
             'price': 150,
@@ -586,8 +588,8 @@ def get_properties():
             'board_num': 12,
             'belongs_to': None,
             'is_mortgaged': False
-        },
-        'water works': {
+        }),
+        'water works': Property(kwargs = {
             'name': 'water works',
             'type': 'utility',
             'price': 150,
@@ -597,7 +599,7 @@ def get_properties():
             'board_num': 28,
             'belongs_to': None,
             'is_mortgaged': False
-        }
+        })
 
     }
     return dict_properties

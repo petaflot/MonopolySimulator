@@ -10,6 +10,8 @@ Monopoly simulator allows you to rapidly simulate the game of monopoly with N pl
 
 Players can also be interactive.
 
+Note that I made heavy changes to the code because I found the style to be weird and/or unconsistent ; the original author is likely not to recognize it.
+
 ## Install
 
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install monopoly_simulator.
