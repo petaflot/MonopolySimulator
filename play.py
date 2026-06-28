@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-from monosim.player import Player
+from monosim.board import game_board, get_community_chest_cards, get_chance_cards
 from monosim.bank import Bank
-from monosim.board import get_board, get_roads, get_properties, get_community_chest_cards, get_chance_cards
+from monosim.player import Player
 from monosim.custom_exceptions import InsufficientFundsAvailable
 
 if __name__ == '__main__':
@@ -19,12 +19,10 @@ if __name__ == '__main__':
     for seed in range(0, 10000):
         random.seed(seed)
         bank = Bank()
-        list_board, dict_roads = get_board(),  get_roads()
-        dict_properties = get_properties()
         community_cards_deck = get_community_chest_cards()
         chance_cards_deck = get_chance_cards()
 
-        list_players = list([ Player(f"Player{i}", i, bank, list_board, dict_roads, dict_properties, community_cards_deck, chance_cards_deck) for i in range(player_count) ])
+        list_players = list([ Player(f"Player{i}", i, bank, game_board, community_cards_deck, chance_cards_deck) for i in range(player_count) ])
 
         for player in list_players:
             player.meet_other_players(list_players)

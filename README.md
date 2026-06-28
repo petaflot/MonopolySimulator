@@ -1,6 +1,6 @@
 # MonopolySimulator
 
-> Monopoly simulator based on Python.
+> Monopoly simulator based on Python (hard fork)
 
 <p align="center">
 <img src="images/monopoly_board.jpg" width="400" />
@@ -9,8 +9,6 @@
 Monopoly simulator allows you to rapidly simulate the game of monopoly with N players. While the library provides an implementation of a simple naive player ("dummy"), their behaviour can be modified to test hypotheses about the best strategies and train intelligent agents with Machine Learning.
 
 Players can also be interactive.
-
-Note that I made heavy changes to the code because I found the style to be weird and/or unconsistent ; the original author is likely not to recognize it.
 
 ## Install
 
