@@ -52,6 +52,7 @@ game_board = [
     Cell(kwargs = {
         'name': 'income tax',
         'type': 'tax',
+        'tax_amount': 200,
     }),
     Station(kwargs = {
         'name': 'kings cross station',
@@ -534,6 +535,7 @@ game_board = [
     Cell(kwargs = {
         'name': 'super tax',
         'type': 'tax',
+        'tax_amount': 100,
     }),
     Road(kwargs = {
         'name': 'mayfair',
@@ -565,7 +567,11 @@ def get_properties():
 def get_color_to_house_mapping():
     from collections import defaultdict
 
+    def zero():
+        return 0
+
     dict_color_to_house_mapping = defaultdict(list)
+    color_property_count = defaultdict(zero)
     max_name_len = 0
 
     for c in game_board:
@@ -573,9 +579,10 @@ def get_color_to_house_mapping():
             max_name_len = len(c.name)
         if c.type == 'road':
             dict_color_to_house_mapping[c.color].append(c)
+            color_property_count[c.color] += 1
 
     print(f"INFO: {max_name_len=}")
-    return dict_color_to_house_mapping
+    return dict_color_to_house_mapping, color_property_count
 
 
 from monosim.cards import Card, Deck

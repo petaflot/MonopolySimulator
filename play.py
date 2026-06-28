@@ -33,7 +33,7 @@ if __name__ == '__main__':
             while not any([player.has_lost() for player in list_players]) and idx_count < 2000:
                 #clear()
                 for player in list_players:
-                    print(player.get_print_state())
+                    #print(player.get_print_state())
                     player.play()
                     #clear()
                     print(player.get_print_state(),end='\n\n')
