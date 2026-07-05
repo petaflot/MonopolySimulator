@@ -3,8 +3,13 @@ class Cell:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+        self.inventory = []
+
     def __str__(self):
         return self.name
+
+    def estimate_rent(self, player):
+        return 0
 
 class Road(Cell):
     def __init__(self, *args, kwargs):#, owned_houses_hotels=None):
@@ -24,8 +29,8 @@ class Road(Cell):
         :return: (int) Rent amount
         """
 
-        if self.belongs_to is None:
-            raise Exception('{} does not belong to anyone'.format(self.name))
+        if self.belongs_to is None or player is self.belongs_to:
+            return 0
 
         if self.belongs_to.has_all_roads_of_color(self.color):
             houses, hotel = self.belongs_to.get_houses_hotel_count(self.name)
@@ -55,8 +60,8 @@ class Utility(Cell):
         :return: (int) Rent amount
         """
 
-        if self.belongs_to is None:
-            raise Exception('{} does not belong to anyone'.format(self.name))
+        if self.belongs_to is None or player is self.belongs_to:
+            return 0
 
         num_of_utilities = self.belongs_to.get_owned_utilities_count()
 
@@ -78,8 +83,8 @@ class Station(Cell):
         :return: (int) Rent amount
         """
 
-        if self.belongs_to is None:
-            raise Exception('{} does not belong to anyone'.format(self.name))
+        if self.belongs_to is None or player is self.belongs_to:
+            return 0
 
         num_of_stations = self.belongs_to.get_owned_stations_count()
 

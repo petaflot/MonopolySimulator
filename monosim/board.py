@@ -3,10 +3,12 @@ from monosim.cell import Cell, Road, Utility, Station
 game_board = [
     Cell(kwargs = {
         'name': 'go',
+        'description': "You stand at the city's grand gateway, where every journey begins. The streets ahead shimmer with promise, your purse feels satisfyingly heavy, and fortune urges you onward. Every legend starts with a single confident step.",
         'type': 'go',
     }),
     Road(kwargs = {
         'name': 'old kent road',
+        'description': "You arrive at Old Kent Road, an ancient route leading southeast from the City of London. Traders, carts and modern traffic share its path. Inns and workshops have long vanished, but echoes of centuries of travel still linger.",
         'type': 'road',
         'price': 60,
         'rent': 2,
@@ -27,10 +29,12 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'community chest',
+        'description': "A weathered oak chest sits beside the road, its brass lock already sprung open. Inside lie curious letters, unexpected gifts and the occasional outrageous bill. Fate has wrapped itself in neat little envelopes.",
         'type': 'community chest',
     }),
     Road(kwargs = {
         'name': 'whitechapel road',
+        'description': "You step onto Whitechapel Road, where East London's markets and diverse communities have gathered for generations. Busy shopfronts line the road, while Victorian buildings hint at tales of industry, immigration and mystery.",
         'type': 'road',
         'price': 60,
         'rent': 4,
@@ -51,11 +55,13 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'income tax',
+        'description': "A stern tax collector emerges from a tidy office, ledger in hand. He offers a polite nod before demanding a generous share of your hard-earned gold. Bureaucracy, it seems, is the mightiest spell of all.",
         'type': 'tax',
         'tax_amount': 200,
     }),
     Station(kwargs = {
         'name': 'kings cross station',
+        'description': "Steam drifts beneath the vast iron roof of King's Cross Station. Porters hurry between platforms while distant whistles echo through the hall. Countless journeys begin here—choose your destination before the next train departs.",
         'type': 'station',
         'price': 200,
         'rent': 25,
@@ -67,6 +73,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'the angel islington',
+        'description': "You reach The Angel, Islington, a bustling junction named after a historic coaching inn. Elegant Georgian terraces overlook lively streets filled with theatres, cafés and travellers moving between London's northern districts.",
         'type': 'road',
         'price': 100,
         'rent': 6,
@@ -87,10 +94,12 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'chance',
+        'description': """A mysterious fortune teller appears in a swirl of coloured scarves. With a knowing smile, they hand you a single enchanted card. "Luck," they whisper, "is merely destiny wearing a disguise." """,
         'type': 'chance',
     }),
     Road(kwargs = {
         'name': 'euston road',
+        'description': "You enter Euston Road, a grand thoroughfare beside major railway stations. Steam has given way to modern trains, yet the road still hums with arrivals, departures and imposing Victorian architecture.",
         'type': 'road',
         'price': 100,
         'rent': 6,
@@ -111,6 +120,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'pentonville road',
+        'description': "You follow Pentonville Road, linking King's Cross with Islington. Broad streets and sturdy nineteenth-century buildings rise around you, once serving merchants and travellers heading into London's growing northern suburbs.",
         'type': 'road',
         'price': 120,
         'rent': 8,
@@ -131,10 +141,12 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'jail',
+        'description': "The prison stands as a grim monument to poor decisions and mostly bad luck. You take a brief look around, offer the guards a courteous wave pretending not to care about the unfortunate inmates.",
         'type': 'jail',
     }),
     Road(kwargs = {
         'name': 'pall mall',
+        'description': "You arrive at Pall Mall, a distinguished street once named for a seventeenth-century ball game. Refined clubs and stately buildings line the route, where diplomats and gentlemen once shaped the affairs of the Empire.",
         'type': 'road',
         'price': 140,
         'rent': 10,
@@ -155,6 +167,7 @@ game_board = [
     }),
     Utility(kwargs = {
         'name': 'Electric company',
+        'description': "Great humming generators crackle with bottled lightning. Engineers in soot-covered overalls coax sparks through mighty cables, illuminating the city one brilliant flash at a time. Best avoid touching anything metallic.",
         'type': 'utility',
         'price': 150,
         'rent': None,  # utility's rent depends of dice value
@@ -166,6 +179,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'whitehall',
+        'description': "You stand upon Whitehall, the ceremonial heart of British government. Historic ministries and monuments flank the broad avenue, while the distant chimes of Westminster remind every traveller that power resides nearby.",
         'type': 'road',
         'price': 140,
         'rent': 10,
@@ -186,6 +200,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'northumberland avenue',
+        'description': "You enter Northumberland Avenue, stretching from Trafalgar Square toward the Thames. Grand Victorian hotels and impressive stone buildings recall an age when wealthy visitors arrived seeking London's finest accommodations.",
         'type': 'road',
         'price': 160,
         'rent': 12,
@@ -206,6 +221,7 @@ game_board = [
     }),
     Station(kwargs = {
         'name': 'marylebone station',
+        'description': "Marylebone Station greets you with elegant arches and a calmer rhythm than its larger rivals. Travellers gather beneath its historic roof, ready to depart for distant towns beyond London's northern horizon.",
         'type': 'station',
         'price': 200,
         'rent': 25,
@@ -217,6 +233,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'bow street',
+        'description': "You find yourself on Bow Street, famed for justice rather than trade. The historic Magistrates' Court and the legendary Bow Street Runners once guarded these streets, where criminals and constables crossed paths.",
         'type': 'road',
         'price': 180,
         'rent': 14,
@@ -237,10 +254,12 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'community chest',
+        'description': """You discover a brightly painted charity chest surrounded by curious onlookers. Some leave generous gifts, others collect unexpected blessings. Whatever waits inside, someone insists it's "for the good of the community." """,
         'type': 'community chest',
     }),
     Road(kwargs = {
         'name': 'marlborough street',
+        'description': "You reach Marlborough Street, tucked behind Soho's bustling lanes. Once home to a well-known magistrates' court, its quieter surroundings conceal stories of famous trials amid elegant Georgian façades.",
         'type': 'road',
         'price': 180,
         'rent': 14,
@@ -261,6 +280,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'vine street',
+        'description': "You step onto Vine Street, a short passage near Piccadilly. Though modest in length, it once housed an important police station. Narrow streets and historic brickwork whisper of London's hidden corners.",
         'type': 'road',
         'price': 200,
         'rent': 16,
@@ -281,10 +301,12 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'free parking',
+        'description': "A peaceful square awaits, blessedly untouched by wardens, tolls or traffic. You rest your weary feet, enjoy the quiet, and wonder why every stop along your adventure can't be this pleasant.",
         'type': 'free parking',
     }),
     Road(kwargs = {
         'name': 'strand',
+        'description': "You walk along the Strand, once the riverside road connecting the City and Westminster. Magnificent theatres, churches and grand buildings surround you, while every corner seems to echo with centuries of performers and nobles.",
         'type': 'road',
         'price': 220,
         'rent': 18,
@@ -305,10 +327,12 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'chance',
+        'description': "A mischievous raven swoops overhead and drops a sealed parchment at your feet. Whether it contains glorious fortune or spectacular inconvenience is entirely between you and destiny.",
         'type': 'chance',
     }),
     Road(kwargs = {
         'name': 'fleet street',
+        'description': "You arrive at Fleet Street, legendary home of Britain's newspapers. Gothic churches and historic offices stand beside narrow alleys, where printers, journalists and storytellers once forged the day's headlines.",
         'type': 'road',
         'price': 220,
         'rent': 18,
@@ -329,6 +353,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'trafalgar square',
+        'description': "You enter Trafalgar Square, watched over by Nelson's Column and guarded by bronze lions. Fountains shimmer before the National Gallery as travellers, performers and pigeons gather in London's famous public square.",
         'type': 'road',
         'price': 240,
         'rent': 20,
@@ -349,6 +374,7 @@ game_board = [
     }),
     Station(kwargs = {
         'name': 'Fenchurch st. station',
+        'description': "You arrive at Fenchurch Street Station, gateway to London's eastern railways. Commuters stream through the platforms with practiced precision, while trains stand ready to whisk adventurers toward the coast.",
         'type': 'station',
         'price': 200,
         'rent': 25,
@@ -360,6 +386,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'leicester square',
+        'description': "You reach Leicester Square, the vibrant heart of London's entertainment district. Bright cinemas, theatres and bustling crowds surround the gardens, where every evening feels like the opening of a grand adventure.",
         'type': 'road',
         'price': 260,
         'rent': 22,
@@ -380,6 +407,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'coventry street',
+        'description': "You stroll along Coventry Street, linking Leicester Square with Piccadilly Circus. Glittering theatres, restaurants and illuminated signs create an atmosphere where every traveller feels drawn toward excitement.",
         'type': 'road',
         'price': 260,
         'rent': 22,
@@ -400,6 +428,7 @@ game_board = [
     }),
     Utility(kwargs = {
         'name': 'water works',
+        'description': "Giant pumps groan beneath sturdy brick buildings as fresh water courses through hidden pipes. Every splash and rumble reminds you that even the greatest cities survive thanks to unseen heroes below ground.",
         'type': 'utility',
         'price': 150,
         'rent': None,  # utility's rent depends of dice value
@@ -411,6 +440,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'piccadilly',
+        'description': "You arrive on Piccadilly, one of London's most celebrated streets. Grand hotels, historic clubs and elegant shops line the route, leading westward from Piccadilly Circus toward the greenery of Hyde Park.",
         'type': 'road',
         'price': 280,
         'rent': 24,
@@ -431,10 +461,12 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'go to jail',
+        'description': """A booming voice declares, "Your adventure takes an unexpected detour!" Before you can protest, uniformed constables escort you firmly toward the city gaol. Heavy iron gates slam shut behind you. The stone walls are sturdy, the guards alert, and freedom feels frustratingly close.""",
         'type': 'go to jail',
     }),
     Road(kwargs = {
         'name': 'regent street',
+        'description': "You enter Regent Street, designed with sweeping curves and graceful façades. Uniform Portland stone buildings house renowned shops, creating one of London's finest examples of planned Georgian-era architecture.",
         'type': 'road',
         'price': 300,
         'rent': 26,
@@ -455,6 +487,7 @@ game_board = [
     }),
     Road(kwargs = {
         'name': 'oxford street',
+        'description': "You step onto Oxford Street, London's busiest shopping avenue. Countless stores stretch before you beneath grand nineteenth-century buildings, while an endless stream of shoppers turns the road into a lively marketplace.",
         'type': 'road',
         'price': 300,
         'rent': 26,
@@ -475,10 +508,12 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'community chest',
+        'description': """An elderly benefactor waves you over to an ornate chest adorned with polished brass. "Take one," they smile. The contents range from miraculous windfalls to awkward obligations. Such is civic generosity.""",
         'type': 'community chest',
     }),
     Road(kwargs = {
         'name': 'bond street',
+        'description': "You arrive at Bond Street, famed for luxury boutiques, jewellers and art galleries. Elegant Georgian and Victorian buildings frame a district where fortunes are spent and exquisite treasures await discerning visitors.",
         'type': 'road',
         'price': 320,
         'rent': 28,
@@ -499,6 +534,7 @@ game_board = [
     }),
     Station(kwargs = {
         'name': 'liverpool st station',
+        'description': "Liverpool Street Station buzzes with relentless energy. Beneath its soaring roof, travellers, merchants and commuters weave through the crowds as trains race toward East Anglia and beyond.",
         'type': 'station',
         'price': 200,
         'rent': 25,
@@ -510,10 +546,12 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'chance',
+        'description': "A grinning street magician flicks a card high into the air. It lands perfectly in your hand before vanishing from his deck. Whatever is written upon it, your adventure has just become far more interesting.",
         'type': 'chance',
     }),
     Road(kwargs = {
         'name': 'park lane',
+        'description': "You reach Park Lane, running beside Hyde Park's eastern edge. Prestigious hotels and luxury residences overlook broad green spaces, offering a striking contrast between bustling traffic and tranquil parkland.",
         'type': 'road',
         'price': 350,
         'rent': 35,
@@ -534,11 +572,13 @@ game_board = [
     }),
     Cell(kwargs = {
         'name': 'super tax',
+        'description': """An exceptionally well-dressed official adjusts their spectacles and presents an intimidatingly thick ledger. "Nothing personal," they sigh, collecting an even larger tribute. Even dragons, you're told, dislike paying this one.""",
         'type': 'tax',
         'tax_amount': 100,
     }),
     Road(kwargs = {
         'name': 'mayfair',
+        'description': "You arrive in Mayfair, one of London's most prestigious districts in the West End. Georgian townhouses, luxury hotels and exclusive squares surround you, where elegance, wealth and centuries of history meet at every corner.",
         'type': 'road',
         'price': 400,
         'rent': 50,
