@@ -1,4 +1,4 @@
-# vim: number
+# vim: noet ts=4 number
 import asyncio
 from monosim.board import get_color_to_house_mapping
 from monosim.custom_exceptions import *
@@ -18,6 +18,7 @@ from termcolor import cprint
     NOTE: for algorithmic simplicity, house count on a street stays at 4 if a hotel is built
 """
 
+from monosim.constants import CURRENCY_SYMBOL, GO_AMOUNT
 from monosim.dice import roll_dice_physical, roll_dice_auto
 from monosim.board import get_color_to_house_mapping
 color_to_house_mapping, color_property_count = get_color_to_house_mapping()
@@ -26,9 +27,10 @@ from synaptism.protocol import writeX
 
 from q import q
 
+COLOR_STR_LEN = 10
+
 class Player:
-    _dict_owned_colors = {'brown': None, 'light_blue': None, 'purple': None, 'orange': None,
-                               'red': None, 'yellow': None, 'green': None, 'blue': None}
+    _dict_owned_colors = {color: None for color in color_to_house_mapping.keys()}
 
     def __init__(self, name, game, reader, writer, dice_func = None):
         self._name = name
@@ -50,16 +52,20 @@ class Player:
         self._list_mortgaged_stations = []
         self._list_mortgaged_utilities = []
         self._dict_owned_houses_hotels = {}
+        self.inventory = ['iPhone']    # TODO buy from shop on 'Go'/'Free parking'
         self._has_lost = False
+        self.rent_multiplicator = 1
 
-        self.roll_dice = roll_dice_physical if dice_func is None else dice_func
+        self.roll_dice = roll_dice_auto if dice_func is None else dice_func
 
         self.reader, self.writer = reader, writer
         self.rent_paid = True
 
     async def input(self, prompt):
-        await self._from_server_to_client.put(prompt)
-        return await self._from_client_to_server.get()
+        self._input_queue = asyncio.Queue()
+        writeX(self.writer, prompt.encode('utf-8'))
+        res = (await self._input_queue.get())['uuids'][1]    # 'context'
+        delattr( s.decode('utf-8')
 
     def __str__(self):
         return f"<Player:{self._name}>"
@@ -87,13 +93,31 @@ class Player:
                 'owned_houses_hotels': self._dict_owned_houses_hotels, 'has_lost': self._has_lost,
                 'bank_cash': self._game.bank.cash}
 
-    def get_print_state(self, turn_count):
-        from termcolor import colored
+    def get_score(self, turn_count):
         owned_hotels = sum([i[1] for i in self._dict_owned_houses_hotels.values()])
 
-        return f"""{self._name}, dice value {self._dice_value:>2}, cash {self._cash:>5}, mortgageable amount {self._properties_total_mortgageable_amount:>5}, in position {self._position:>2} ({self._game._game_board[self._position].name})
-    owned_roads: {', '.join([f"{r} ({r.color})" if r not in self._list_mortgaged_roads else colored(r,'grey') for r in self._list_owned_roads])},
-    owned_roads={len(self._list_owned_roads)}, owned_utilities={self.get_owned_utilities_count()}, owned_stations={self.get_owned_stations_count()}, owned_houses={sum([i[0] for i in self._dict_owned_houses_hotels.values()]) -4*owned_hotels}, owned_hotels={owned_hotels}, {self.owned_colors = }"""
+        def get_roads_owned():
+            colors = []
+            for color in self._dict_owned_colors.keys():
+                color_roads = [road for road in self._list_owned_roads if road.color == color]
+                if len(color_roads) == len(color_to_house_mapping):
+                    color = color+'*'
+                if len(color_roads):
+                    colors.append(f"\t\t{color:<{COLOR_STR_LEN}}: "+', '.join([road.name for road in color_roads]))
+            if len(colors):
+                return '\n'+'\n'.join(colors)
+            else:
+                return ''
+
+        return f"""### Score for {self._name}, in {self._game._game_board[self._position].name} (cell {self._position:>2}) ###
+    last dice value:    {self._dice_value:>5}
+    cash:               {self._cash:>5}{CURRENCY_SYMBOL}
+    mortgageable amount:{self._properties_total_mortgageable_amount:>5}{CURRENCY_SYMBOL}
+    owned utilities ({self.get_owned_utilities_count()}): {', '.join([u.name for u in self._list_owned_utilities])}
+    owned stations  ({self.get_owned_stations_count()}): {', '.join([s.name for s in self._list_owned_stations])}
+    owned roads    ({len(self._list_owned_roads):>2}): {get_roads_owned()}
+    owned houses: {sum([i[0] for i in self._dict_owned_houses_hotels.values()]) -4*owned_hotels}, owned hotels: {owned_hotels}
+###"""
 
 
     def set_cash(self, amount):
@@ -135,7 +159,7 @@ class Player:
             case _:
                 raise ValueError(cell.type)
 
-    def pay_bank(self, amount):
+    async def pay_bank(self, amount):
         """ Pay amount to the bank. Money are subtracted from player's cash and added to bank's total cash.
 
         :param amount: (int) Amount of money to pay
@@ -143,8 +167,12 @@ class Player:
         """
 
         if amount < 0:
+            await self._game.broadcast(f"{self._name} receives {-amount}{CURRENCY_SYMBOL} from the bank.")
             self._cash += self._game.bank.withdraw(-amount)
+        elif self._cash < amount:
+            raise InsufficientFundsAvailable
         else:
+            await self._game.broadcast(f"{self._name} pays the bank {amount}{CURRENCY_SYMBOL}.")
             self._cash -= self._game.bank.pay(amount)
 
     async def pay_tax(self, tax_amount):
@@ -156,15 +184,15 @@ class Player:
         """
 
         if self.have_enough_money(tax_amount):
-            self.pay_bank(tax_amount)
+            await self.pay_bank(tax_amount)
         else:
             if not await self.is_bankrupt(tax_amount):
                 # TODO check this is consistent
                 amount_required = tax_amount - self._cash
                 await self.get_money_from_mortgages(amount_required)
-                self.pay_bank(tax_amount)
+                await self.pay_bank(tax_amount)
 
-    def pay_opponent(self, opponent, amount):
+    async def pay_opponent(self, opponent, amount):
         """ Pay another player.
 
         :param opponent_name: (String) name of the other opponent
@@ -172,20 +200,22 @@ class Player:
         :return:
         """
         assert self._cash >= amount
-        cprint(f"{opponent._name} received {amount} from {self._name}",'green',)
+        await self._game.broadcast(f"{opponent._name} received {amount}{CURRENCY_SYMBOL} from {self._name}", NOT = (self, opponent))
+        await writeX(opponent.writer, f"You received {amount}{CURRENCY_SYMBOL} from {self._name}")
+        await writeX(self.writer, f"You gave {amount}{CURRENCY_SYMBOL} to {opponent._name}")
         opponent._cash += amount
         self._cash -= amount
 
-    def pay_each_player(self, amount):
+    async def pay_each_player(self, amount):
         for o in self._list_players:
-            self.pay_opponent(o, amount)
+            await self.pay_opponent(o, amount)
 
-    def lose_money(self, cell, notes = (10,20,20,20,50,50,100) ):
+    async def lose_money(self, cell, notes = (10,20,20,20,50,50,100) ):
         from random import choice
         amount = choice(notes)
         cell.inventory.append(('lost money', amount))
-        self._game.broadcast(f"{self._name} lost {amount} on {cell}.")
-        
+        await self._game.broadcast(f"{self._name} lost {amount}{CURRENCY_SYMBOL} on {cell}.")
+
 
     async def buy_road(self, road):
         """ Buy road
@@ -194,16 +224,9 @@ class Player:
         :return:
         """
         if road.type != 'road' or road.belongs_to is not None:
-            raise CannotDoThat( f"This is not a road or it already belongs to someone".encode('utf-8') )
+            raise CannotDoThat( f"This is not a road or it already belongs to someone" )
 
-        try:
-            self.pay_bank(road.price)
-        except InsufficientFundsAvailable:
-            if not await self.is_bankrupt(road.price):
-                raise NotImplementedError
-            else:
-                raise
-        else:
+        async def exchange(road):
             # exchange ownership
             road.belongs_to = self
             self._list_owned_roads.append(road)
@@ -219,22 +242,36 @@ class Player:
             if count_roads_of_color == color_property_count[road.color]:
                 self._dict_owned_colors[road.color] = self
 
+            await self._game.broadcast(f"{self._name} is now the owner of {road.name} ; rent is currently {road.estimate_rent(None)}{CURRENCY_SYMBOL}")
+
+        try:
+            await self.pay_bank(road.price)
+        except InsufficientFundsAvailable:
+            if not await self.is_bankrupt(road.price):
+                await self.pay_bank(road.price)
+                await exchange(road)
+            else:
+                await self._game.broadcast(f"{self._name} has insufficient funds to purchase {road.name}")
+        else:
+            await exchange(road)
+
     async def buy_property(self, property_obj):
         """ Buy property (station or utility)
 
         :param property_obj: (dictionary) Property information
         :return:
         """
+        # TODO like buy_road (remove buy_road?)
         if property_obj.type not in ('station','utility') or property_obj.belongs_to is not None:
-            raise CannotDoThat( f"This is not a property or it already belongs to someone".encode('utf-8') )
+            raise CannotDoThat( f"This is not a property or it already belongs to someone" )
 
         try:
-            self.pay_bank(property_obj.price)
+            await self.pay_bank(property_obj.price)
         except InsufficientFundsAvailable:
             if not await self.is_bankrupt(property_obj.price):
                 raise NotImplementedError
             else:
-                raise
+                raise PlayerHasLost
         else:
             # exchange ownership
             property_obj.belongs_to = self
@@ -247,7 +284,7 @@ class Player:
             # mortgage value
             self._properties_total_mortgageable_amount += property_obj.mortgage_value
 
-    def pay_rent(self, property_obj, amount):
+    async def pay_rent(self, property_obj, amount):
         """ Pay the rent to the owner of the property.
 
         :param property_obj: (dict) Property information
@@ -255,7 +292,8 @@ class Player:
         :return:
         """
 
-        self.pay_opponent(property_obj.belongs_to, amount)
+        await self.pay_opponent(property_obj.belongs_to, amount*self.rent_multiplicator)
+        self.rent_multiplicator = 1
 
     def bid(self, dict_road_info, player_offer):
         """ Counter-bid an offer"""
@@ -268,7 +306,7 @@ class Player:
         # buying the road at a lower (available) price.
         return 'mortgage' if await self.input(f"Do you want mortgage some properties to buy '{cell.name}' for {cell.price}? ").lower() in ('y','yes') else 'pass'
 
-    def mortgage(self, property_obj):
+    async def mortgage(self, property_obj):
         if property_obj.belongs_to != self:
             raise Exception(f"{property_obj.type} {property_obj.name} not owned by player {self._name}")
 
@@ -276,9 +314,9 @@ class Player:
         self._list_mortgaged_roads.append(property_obj)
 
         self._properties_total_mortgageable_amount -= property_obj.mortgage_value
-        self.pay_bank(-property_obj.mortgage_value)
+        await self.pay_bank(-property_obj.mortgage_value)
 
-    def unmortgage(self, property_obj):
+    async def unmortgage(self, property_obj):
         """ Unmortgage property.
 
         :param property_obj: (Cell) Property
@@ -295,7 +333,7 @@ class Player:
             raise
 
         self._properties_total_mortgageable_amount += property_obj.unmortgage_value
-        self.pay_bank(property_obj.unmortgage_value)
+        await self.pay_bank(property_obj.unmortgage_value)
 
     async def choose_mortgage_properties(self, list_mortgageable_properties, amount):
         """ Return a list of properties to mortgage given a required amount. This function
@@ -305,31 +343,32 @@ class Player:
         :param amount: (int) Amount required
         :return: (list) list of Cell objects
         """
-        dict_mortgage_properties = {}   # temp list
+        dict_mortgage_properties = {}   # temp toggle list
         dict_mortgage_properties |= {cell:False for cell in self._list_owned_roads     if not cell.is_mortgaged}
         dict_mortgage_properties |= {cell:False for cell in self._list_owned_stations  if not cell.is_mortgaged}
         dict_mortgage_properties |= {cell:False for cell in self._list_owned_utilities if not cell.is_mortgaged}
 
         def list_preselection():
+            # TODO not quite right... goes with remove choose_unmortgage_properties -> toggle_mortgage_properties
             i, a = 0, 0
             for p, v in dict_mortgage_properties.items():
-                cprint(f"\t{i:>2}: {p.name:<21} ({p.mortgage_value:>3})",'white' if v else None)
+                writeX( self.writer, f"\t{i:>2}: {p.name:<21} ({p.mortgage_value:>3}{CURRENCY_SYMBOL}){' [mortgage]' if v else '[unmortgage]'}".encode('utf-8'),)
                 if v: a = a+p.mortgage_value
                 i += 1
-            print(f"Total amount from selection mortgage: {a} (cash after: {self._cash+a})")
+            writeX( self.writer, f"Total amount from selection mortgage: {a}{CURRENCY_SYMBOL} (cash after: {self._cash+a}{CURRENCY_SYMBOL})".encode('utf-8'))
 
         list_preselection()
 
         while True:
-            while True:
-                try:
-                    p = list(dict_mortgage_properties.keys())[int(await self.input("Select property to mortgage: "))]
-                    dict_mortgage_properties[p] = not dict_mortgage_properties[p]
-                except (IndexError, ValueError):
-                    break
-            list_preselection()
-            if await self.input('OK? ').lower() in ('y', 'yes'):
-                return [p for p, v in dict_mortgage_properties.items() if dict_mortgage_properties[p]]
+            try:
+                p = list(dict_mortgage_properties.keys())[int(res := await self.input("Select property to toggle ; type 'OK' when done."))]
+                dict_mortgage_properties[p] = not dict_mortgage_properties[p]
+            except (IndexError, ValueError):
+                if 'ok'.startswith(res.lower()):
+                    return [p for p, v in dict_mortgage_properties.items() if dict_mortgage_properties[p]]
+                writeX( self.writer, f"Whut?".encode('utf-8'))
+            finally:
+                list_preselection()
 
 
     async def choose_unmortgage_properties(self):
@@ -343,6 +382,7 @@ class Player:
 
         :return: (list) list of Cell objects
         """
+        raise NotImplementedError("like choose_mortgage_properties (or get rid of current func)")
         dict_unmortgage_properties = {} # temp list
         dict_unmortgage_properties |= {cell:False for cell in self._list_owned_roads     if cell.is_mortgaged}
         dict_unmortgage_properties |= {cell:False for cell in self._list_owned_stations  if cell.is_mortgaged}
@@ -375,7 +415,7 @@ class Player:
         list_mortgageable_properties = \
             [road for road in self._list_owned_roads if road.is_mortgaged is False] +\
             [station for station in self._list_owned_stations if station.is_mortgaged is False] +\
-            [utiliy for utility in self._list_owned_utilities if utility.is_mortgaged is False]
+            [utility for utility in self._list_owned_utilities if utility.is_mortgaged is False]
 
         if len(list_mortgageable_properties) == 0:
             raise Exception('player {} has no properties to mortgage'.format(self._name))
@@ -399,7 +439,7 @@ class Player:
 
         #  mortgage properties
         for property_obj in list_properties:
-            self.mortgage(property_obj)
+            await self.mortgage(property_obj)
 
     async def mortgage_and_buy(self, property_obj):
         """ Mortgage the necessary properties to buy the given property
@@ -427,7 +467,7 @@ class Player:
         """
         return True if self._dict_owned_colors[color] is self else False
 
-    def get_houses_hotel_count(self, road_name):
+    def get_houses_hotel_count(self, road):
         """ Given a road name, returns the number of houses or hotel owned.
             Example: if player owns 2 houses in 'old kent road' returns (2, 0).
             Example: if player owns 1 hotel in 'old kent road' returns (0, 1).
@@ -435,7 +475,7 @@ class Player:
         :param road_name: (String) Name of the road
         :return: (tuple) number of houses, number of hotels
         """
-        return self._dict_owned_houses_hotels[road_name]
+        return self._dict_owned_houses_hotels[road]
 
     def get_owned_stations_count(self):
         """ Return the number of stations owned.
@@ -471,10 +511,13 @@ class Player:
         """
         if self._properties_total_mortgageable_amount + self._cash < value_to_pay:
             self._has_lost = True
+        elif 'iPhone' not in self.inventory:
+            await self._game.broadcast( f"{self._name} doesn't have a phone, can't call their banker and is bankrupt." )
+            self._has_lost = True
         else:
             await self.get_money_from_mortgages(value_to_pay)
-            
-        self._game.input_queue.put_nowait(self, f"is_bankrupt({self._name}, {value_to_pay}): {self._cash} {self._has_lost=}")
+
+        self._game.input_queue.put_nowait((self, {'uuids': [None, f"is_bankrupt({self._name}, {value_to_pay}): {self._cash} {self._has_lost=}".encode('utf-8')]}))    # 'context'
         return self._has_lost
 
     async def want_to_buy_house_hotel(self):
@@ -556,8 +599,9 @@ class Player:
 
         :param road: (str) road in where to buy the house
         """
+        # TODO like buy_road after get_money_from_mortgages()
         if road.type != 'road' or road.belongs_to is not player:
-            raise CannotDoThat( f"This is not a road or you cannot build here".encode('utf-8') )
+            raise CannotDoThat( f"This is not a road or you cannot build here" )
 
         if self._dict_owned_houses_hotels[road][1] == 1:
             raise Exception("Player {} already owns a hotel on the road {}. "
@@ -568,7 +612,7 @@ class Player:
 
         if self._game.bank._houses > 0:
             try:
-                self.pay_bank(road.houses_cost)
+                await self.pay_bank(road.houses_cost)
             except InsufficientFundsAvailable:
                 await self.get_money_from_mortgages(road.houses_cost)
             else:
@@ -583,8 +627,9 @@ class Player:
 
         :param road: (str) road in where to buy the hotel
         """
+        # TODO like buy_road after get_money_from_mortgages()
         if road.type != 'road' or road.belongs_to is not player:
-            raise CannotDoThat( f"This is not a road or you cannot build here".encode('utf-8') )
+            raise CannotDoThat( f"This is not a road or you cannot build here" )
 
         if self._dict_owned_houses_hotels[road][1] == 1:
             raise Exception("Player {} already owns 1 hotel in the road {}. "
@@ -594,7 +639,7 @@ class Player:
             if self._dict_owned_houses_hotels[road][0] != 4:
                 raise Exception("Player {} cannot buy a hotel in road {} if "
                                 "4 houses are not owned first".format(self._name, road))
-            self.pay_bank(road.hotels_cost)
+            await self.pay_bank(road.hotels_cost)
             self._game.bank._houses += 4
             self._game.bank._hotels -= 1
             self._dict_owned_houses_hotels[road] = (4, 1)
@@ -635,17 +680,21 @@ class Player:
         """
         return True if await self.input("Do you want to mortgage a property to buy a hotel? ").lower() in ('y','yes') else False
 
-    def go_to_jail(self):
+    async def go_to_jail(self):
         """ Move the player in the jail cell. Change player position to 10. Used when the player ends in the cell
             30 (go to jail) or when chances and opportunity cards say to do so."""
+
+        # TODO if player is in dept, make them pay!
+
         self._jail_count = 3
         self._position = 10
-        self._game.broadcast(f"{self._name} was sent to jail.")
+        await self._game.broadcast(f"{self._name} was sent to jail.")
 
-    def get_out_of_jail(self):
+    async def get_out_of_jail(self):
         """ Player leaves the jail. Jail count is set to zero and the position updated with the latest dices values"""
         self._jail_count = 0
         self._position = (self._position + self._dice_value)
+        await self._game.broadcast(f"{self._name} gets out of jail.")
 
     async def pay_to_exit_jail(self):
         """ Determine whether the player wants to wait the next turn or pay to get out of the jail. This is used
@@ -671,7 +720,7 @@ class Player:
         total_required_amount = amounts[0] * count_houses + amounts[1] * count_hotels
 
         if self.have_enough_money(total_required_amount):
-            self.pay_bank(total_required_amount)
+            await self.pay_bank(total_required_amount)
         elif self.have_enough_money(total_required_amount, plus_mortgageable=True):
             residual_amount_required = total_required_amount - self.cash
             await self.get_money_from_mortgages(residual_amount_required)
@@ -679,35 +728,38 @@ class Player:
             await self.is_bankrupt(total_required_amount)
 
 
-    def advance(self, distance):
-        """move forwards `distance` cells ; collect 200 if passing through GO"""
+    async def advance(self, distance):
+        """move forwards `distance` cells ; collect {GO_AMOUNT} if passing through GO"""
         #cprint(f"advance {self._position} -> {(self._position + distance) % len(self._game._game_board)}", 'yellow')
         self._position = (self._position + distance) % len(self._game._game_board)
 
-        # TODO if catching up with a player in debt, make that other player pay and go in jail
+        # TODO if catching up with a player in debt, make that other player go in jail
 
-        # check if player passed Go. If yes, get 200 $
+        # check if player passed Go. If yes, get GO_AMOUNT $
         if self._position - self._dice_value < 0:
             try:
-                self._cash += self._game.bank.withdraw(200)
+                self._cash += self._game.bank.withdraw(GO_AMOUNT)
             except InsufficientFundsAvailable:
-                cprint('InsufficientFundsAvailable: bank is game over!','cyan')
+                await self._game.broadcast('InsufficientFundsAvailable: bank is game over!')
                 raise
                 #sleep(1)
             else:
-                cprint(f"GO: {self._name} collected 200", 'green')
+                await self._game.broadcast(f"{self._name} passed 'Go' and collected {GO_AMOUNT}{CURRENCY_SYMBOL}")
 
-    def go_to(self, where):
+        writeX( self.writer, self._game._game_board[self._position].description.encode('utf-8') )
+
+    async def go_to(self, where):
         if self._position > where: self._position -= len(self._game._game_board)
-        self.advance(where-self._position)
+        await self.advance(where-self._position)
+        #print(f"go_to({where})")
 
 
-    def advanceToNearest(self, what):
+    async def advanceToNearest(self, what):
         i = 0
         while True:
             i += 1
             if self._game._game_board[(self._position+i)%len(self._game._game_board)].type == what:
-                self.advance(i) # TODO hook for rent changes (see TODO in monosim/board.py)
+                await self.advance(i) # TODO hook for rent changes (see TODO in monosim/board.py)
                 return
 
     async def play(self):
@@ -757,30 +809,30 @@ class Player:
 
                 # Double roll
                 if tuple_dices[0] == tuple_dices[1]:
-                    self.get_out_of_jail()
+                    await self.get_out_of_jail()
 
                 # Player has been 3 rounds in jail
                 elif not self._jail_count:
                     if self.have_enough_money(50):
-                        self.pay_bank(50)
-                        self.get_out_of_jail()
+                        await self.pay_bank(50)
+                        await self.get_out_of_jail()
                     else:
                         if not await self.is_bankrupt(50):
                             amount_to_mortgage = 50 - self._cash
                             await self.get_money_from_mortgages(amount_to_mortgage)
-                            self.pay_bank(50)
-                            self.get_out_of_jail()
+                            await self.pay_bank(50)
+                            await self.get_out_of_jail()
 
                 # Player decides to pay or wait in jail
                 else:
                     if await self.pay_to_exit_jail():
                         if self.have_enough_money(50):
-                            self.pay_bank(50)
-                            self.get_out_of_jail()
+                            await self.pay_bank(50)
+                            await self.get_out_of_jail()
                         elif not await self.is_bankrupt(50):
                             await self.get_money_from_mortgages(50)
-                            self.pay_bank(50)
-                            self.get_out_of_jail()
+                            await self.pay_bank(50)
+                            await self.get_out_of_jail()
 
             # buy/pay_lease/etc..
             elif board_cell.type in ('road', 'station', 'utility'):
@@ -809,10 +861,10 @@ class Player:
                     # Have enough money to rent?
                     rent = board_cell.estimate_rent(self)
                     if self.have_enough_money(rent):
-                        self.pay_rent(board_cell, rent)
+                        await self.pay_rent(board_cell, rent)
                     else:
                         if not await self.is_bankrupt(rent):
-                            self.pay_rent(board_cell, rent)
+                            await self.pay_rent(board_cell, rent)
 
                     # self.make_offer(road_owner)  # TODO This should be possible at any time in the game...
 
@@ -824,7 +876,7 @@ class Player:
                 cprint(f"Tax was {board_cell.tax_amount}, thank you and see you soon!",'magenta')
 
             elif board_cell.type == 'go to jail':
-                self.go_to_jail()
+                await self.go_to_jail()
 
             elif board_cell.type == 'community chest':
                 self._game.community_cards_deck.discard( self._game.community_cards_deck.draw(self) )

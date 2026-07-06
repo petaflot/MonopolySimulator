@@ -1,6 +1,6 @@
 # MonopolySimulator
 
-> Monopoly simulator based on Python (hard fork)
+> Monopoly simulator based on Python (hard fork) featuring a TCP server
 
 <p align="center">
 <img src="images/monopoly_board.jpg" width="400" />

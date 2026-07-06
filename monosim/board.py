@@ -1,13 +1,14 @@
+from monosim.constants import CURRENCY_SYMBOL, GO_AMOUNT
 from monosim.cell import Cell, Road, Utility, Station
 
 game_board = [
     Cell(kwargs = {
-        'name': 'go',
+        'name': 'Go',
         'description': "You stand at the city's grand gateway, where every journey begins. The streets ahead shimmer with promise, your purse feels satisfyingly heavy, and fortune urges you onward. Every legend starts with a single confident step.",
         'type': 'go',
     }),
     Road(kwargs = {
-        'name': 'old kent road',
+        'name': 'Old kent road',
         'description': "You arrive at Old Kent Road, an ancient route leading southeast from the City of London. Traders, carts and modern traffic share its path. Inns and workshops have long vanished, but echoes of centuries of travel still linger.",
         'type': 'road',
         'price': 60,
@@ -23,17 +24,14 @@ game_board = [
         'houses_cost': 50,
         'hotels_cost': 50,
         'color': 'brown',
-        'board_num': 1,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Cell(kwargs = {
-        'name': 'community chest',
+        'name': 'Community chest',
         'description': "A weathered oak chest sits beside the road, its brass lock already sprung open. Inside lie curious letters, unexpected gifts and the occasional outrageous bill. Fate has wrapped itself in neat little envelopes.",
         'type': 'community chest',
     }),
     Road(kwargs = {
-        'name': 'whitechapel road',
+        'name': 'Whitechapel road',
         'description': "You step onto Whitechapel Road, where East London's markets and diverse communities have gathered for generations. Busy shopfronts line the road, while Victorian buildings hint at tales of industry, immigration and mystery.",
         'type': 'road',
         'price': 60,
@@ -49,32 +47,26 @@ game_board = [
         'houses_cost': 50,
         'hotels_cost': 50,
         'color': 'brown',
-        'board_num': 3,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Cell(kwargs = {
-        'name': 'income tax',
+        'name': 'Income tax',
         'description': "A stern tax collector emerges from a tidy office, ledger in hand. He offers a polite nod before demanding a generous share of your hard-earned gold. Bureaucracy, it seems, is the mightiest spell of all.",
         'type': 'tax',
         'tax_amount': 200,
     }),
     Station(kwargs = {
-        'name': 'kings cross station',
+        'name': 'Kings Cross station',
         'description': "Steam drifts beneath the vast iron roof of King's Cross Station. Porters hurry between platforms while distant whistles echo through the hall. Countless journeys begin here—choose your destination before the next train departs.",
         'type': 'station',
         'price': 200,
         'rent': 25,
         'mortgage_value': 100,
         'unmortgage_value': 110,
-        'board_num': 5,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'the angel islington',
+        'name': 'The Angel Islington',
         'description': "You reach The Angel, Islington, a bustling junction named after a historic coaching inn. Elegant Georgian terraces overlook lively streets filled with theatres, cafés and travellers moving between London's northern districts.",
-        'type': 'road',
+        'type': 'Road',
         'price': 100,
         'rent': 6,
         'rent_with_color_set': 12,
@@ -87,18 +79,15 @@ game_board = [
         'unmortgage_value': 55,
         'houses_cost': 50,
         'hotels_cost': 50,
-        'color': 'light_blue',
-        'board_num': 6,
-        'belongs_to': None,
-        'is_mortgaged': False
+        'color': 'light blue',
     }),
     Cell(kwargs = {
-        'name': 'chance',
+        'name': 'Chance',
         'description': """A mysterious fortune teller appears in a swirl of coloured scarves. With a knowing smile, they hand you a single enchanted card. "Luck," they whisper, "is merely destiny wearing a disguise." """,
         'type': 'chance',
     }),
     Road(kwargs = {
-        'name': 'euston road',
+        'name': 'Euston road',
         'description': "You enter Euston Road, a grand thoroughfare beside major railway stations. Steam has given way to modern trains, yet the road still hums with arrivals, departures and imposing Victorian architecture.",
         'type': 'road',
         'price': 100,
@@ -113,13 +102,10 @@ game_board = [
         'unmortgage_value': 55,
         'houses_cost': 50,
         'hotels_cost': 50,
-        'color': 'light_blue',
-        'board_num': 8,
-        'belongs_to': None,
-        'is_mortgaged': False
+        'color': 'light blue',
     }),
     Road(kwargs = {
-        'name': 'pentonville road',
+        'name': 'Pentonville road',
         'description': "You follow Pentonville Road, linking King's Cross with Islington. Broad streets and sturdy nineteenth-century buildings rise around you, once serving merchants and travellers heading into London's growing northern suburbs.",
         'type': 'road',
         'price': 120,
@@ -134,20 +120,17 @@ game_board = [
         'unmortgage_value': 66,
         'houses_cost': 50,
         'hotels_cost': 50,
-        'color': 'light_blue',
-        'board_num': 9,
-        'belongs_to': None,
-        'is_mortgaged': False
+        'color': 'light blue',
     }),
     Cell(kwargs = {
-        'name': 'jail',
+        'name': 'Jail',
         'description': "The prison stands as a grim monument to poor decisions and mostly bad luck. You take a brief look around, offer the guards a courteous wave pretending not to care about the unfortunate inmates.",
         'type': 'jail',
     }),
     Road(kwargs = {
-        'name': 'pall mall',
+        'name': 'Pall mall',
         'description': "You arrive at Pall Mall, a distinguished street once named for a seventeenth-century ball game. Refined clubs and stately buildings line the route, where diplomats and gentlemen once shaped the affairs of the Empire.",
-        'type': 'road',
+        'type': 'Road',
         'price': 140,
         'rent': 10,
         'rent_with_color_set': 20,
@@ -161,9 +144,6 @@ game_board = [
         'houses_cost': 100,
         'hotels_cost': 100,
         'color': 'purple',
-        'board_num': 11,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Utility(kwargs = {
         'name': 'Electric company',
@@ -173,12 +153,9 @@ game_board = [
         'rent': None,  # utility's rent depends of dice value
         'mortgage_value': 75,
         'unmortgage_value': 83,
-        'board_num': 12,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'whitehall',
+        'name': 'Whitehall',
         'description': "You stand upon Whitehall, the ceremonial heart of British government. Historic ministries and monuments flank the broad avenue, while the distant chimes of Westminster remind every traveller that power resides nearby.",
         'type': 'road',
         'price': 140,
@@ -194,12 +171,9 @@ game_board = [
         'houses_cost': 100,
         'hotels_cost': 100,
         'color': 'purple',
-        'board_num': 13,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'northumberland avenue',
+        'name': 'Northumberland avenue',
         'description': "You enter Northumberland Avenue, stretching from Trafalgar Square toward the Thames. Grand Victorian hotels and impressive stone buildings recall an age when wealthy visitors arrived seeking London's finest accommodations.",
         'type': 'road',
         'price': 160,
@@ -215,24 +189,18 @@ game_board = [
         'houses_cost': 100,
         'hotels_cost': 100,
         'color': 'purple',
-        'board_num': 14,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Station(kwargs = {
-        'name': 'marylebone station',
+        'name': 'Marylebone station',
         'description': "Marylebone Station greets you with elegant arches and a calmer rhythm than its larger rivals. Travellers gather beneath its historic roof, ready to depart for distant towns beyond London's northern horizon.",
         'type': 'station',
         'price': 200,
         'rent': 25,
         'mortgage_value': 100,
         'unmortgage_value': 110,
-        'board_num': 15,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'bow street',
+        'name': 'Bow street',
         'description': "You find yourself on Bow Street, famed for justice rather than trade. The historic Magistrates' Court and the legendary Bow Street Runners once guarded these streets, where criminals and constables crossed paths.",
         'type': 'road',
         'price': 180,
@@ -248,17 +216,14 @@ game_board = [
         'houses_cost': 100,
         'hotels_cost': 100,
         'color': 'orange',
-        'board_num': 16,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Cell(kwargs = {
-        'name': 'community chest',
+        'name': 'Community chest',
         'description': """You discover a brightly painted charity chest surrounded by curious onlookers. Some leave generous gifts, others collect unexpected blessings. Whatever waits inside, someone insists it's "for the good of the community." """,
         'type': 'community chest',
     }),
     Road(kwargs = {
-        'name': 'marlborough street',
+        'name': 'Marlborough street',
         'description': "You reach Marlborough Street, tucked behind Soho's bustling lanes. Once home to a well-known magistrates' court, its quieter surroundings conceal stories of famous trials amid elegant Georgian façades.",
         'type': 'road',
         'price': 180,
@@ -274,12 +239,9 @@ game_board = [
         'houses_cost': 100,
         'hotels_cost': 100,
         'color': 'orange',
-        'board_num': 18,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'vine street',
+        'name': 'Vine street',
         'description': "You step onto Vine Street, a short passage near Piccadilly. Though modest in length, it once housed an important police station. Narrow streets and historic brickwork whisper of London's hidden corners.",
         'type': 'road',
         'price': 200,
@@ -295,17 +257,14 @@ game_board = [
         'houses_cost': 100,
         'hotels_cost': 100,
         'color': 'orange',
-        'board_num': 19,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Cell(kwargs = {
-        'name': 'free parking',
+        'name': 'Free parking',
         'description': "A peaceful square awaits, blessedly untouched by wardens, tolls or traffic. You rest your weary feet, enjoy the quiet, and wonder why every stop along your adventure can't be this pleasant.",
         'type': 'free parking',
     }),
     Road(kwargs = {
-        'name': 'strand',
+        'name': 'Strand',
         'description': "You walk along the Strand, once the riverside road connecting the City and Westminster. Magnificent theatres, churches and grand buildings surround you, while every corner seems to echo with centuries of performers and nobles.",
         'type': 'road',
         'price': 220,
@@ -321,17 +280,14 @@ game_board = [
         'houses_cost': 150,
         'hotels_cost': 150,
         'color': 'red',
-        'board_num': 21,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Cell(kwargs = {
-        'name': 'chance',
-        'description': "A mischievous raven swoops overhead and drops a sealed parchment at your feet. Whether it contains glorious fortune or spectacular inconvenience is entirely between you and destiny.",
+        'name': 'Chance',
+        'description': "A mischievous raven swoops overhead and drops a sealed envelope at your feet. Whether it contains glorious fortune or spectacular inconvenience is entirely between you and destiny.",
         'type': 'chance',
     }),
     Road(kwargs = {
-        'name': 'fleet street',
+        'name': 'Fleet street',
         'description': "You arrive at Fleet Street, legendary home of Britain's newspapers. Gothic churches and historic offices stand beside narrow alleys, where printers, journalists and storytellers once forged the day's headlines.",
         'type': 'road',
         'price': 220,
@@ -347,12 +303,9 @@ game_board = [
         'houses_cost': 150,
         'hotels_cost': 150,
         'color': 'red',
-        'board_num': 23,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'trafalgar square',
+        'name': 'Trafalgar square',
         'description': "You enter Trafalgar Square, watched over by Nelson's Column and guarded by bronze lions. Fountains shimmer before the National Gallery as travellers, performers and pigeons gather in London's famous public square.",
         'type': 'road',
         'price': 240,
@@ -368,9 +321,6 @@ game_board = [
         'houses_cost': 150,
         'hotels_cost': 150,
         'color': 'red',
-        'board_num': 24,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Station(kwargs = {
         'name': 'Fenchurch st. station',
@@ -380,12 +330,9 @@ game_board = [
         'rent': 25,
         'mortgage_value': 100,
         'unmortgage_value': 110,
-        'board_num': 25,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'leicester square',
+        'name': 'Leicester square',
         'description': "You reach Leicester Square, the vibrant heart of London's entertainment district. Bright cinemas, theatres and bustling crowds surround the gardens, where every evening feels like the opening of a grand adventure.",
         'type': 'road',
         'price': 260,
@@ -401,12 +348,9 @@ game_board = [
         'houses_cost': 150,
         'hotels_cost': 150,
         'color': 'yellow',
-        'board_num': 26,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'coventry street',
+        'name': 'Coventry street',
         'description': "You stroll along Coventry Street, linking Leicester Square with Piccadilly Circus. Glittering theatres, restaurants and illuminated signs create an atmosphere where every traveller feels drawn toward excitement.",
         'type': 'road',
         'price': 260,
@@ -422,24 +366,18 @@ game_board = [
         'houses_cost': 150,
         'hotels_cost': 150,
         'color': 'yellow',
-        'board_num': 27,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Utility(kwargs = {
-        'name': 'water works',
+        'name': 'Water Works',
         'description': "Giant pumps groan beneath sturdy brick buildings as fresh water courses through hidden pipes. Every splash and rumble reminds you that even the greatest cities survive thanks to unseen heroes below ground.",
         'type': 'utility',
         'price': 150,
         'rent': None,  # utility's rent depends of dice value
         'mortgage_value': 75,
         'unmortgage_value': 83,
-        'board_num': 28,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'piccadilly',
+        'name': 'Piccadilly',
         'description': "You arrive on Piccadilly, one of London's most celebrated streets. Grand hotels, historic clubs and elegant shops line the route, leading westward from Piccadilly Circus toward the greenery of Hyde Park.",
         'type': 'road',
         'price': 280,
@@ -455,17 +393,14 @@ game_board = [
         'houses_cost': 150,
         'hotels_cost': 150,
         'color': 'yellow',
-        'board_num': 29,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Cell(kwargs = {
-        'name': 'go to jail',
+        'name': 'Go to jail',
         'description': """A booming voice declares, "Your adventure takes an unexpected detour!" Before you can protest, uniformed constables escort you firmly toward the city gaol. Heavy iron gates slam shut behind you. The stone walls are sturdy, the guards alert, and freedom feels frustratingly close.""",
         'type': 'go to jail',
     }),
     Road(kwargs = {
-        'name': 'regent street',
+        'name': 'Regent street',
         'description': "You enter Regent Street, designed with sweeping curves and graceful façades. Uniform Portland stone buildings house renowned shops, creating one of London's finest examples of planned Georgian-era architecture.",
         'type': 'road',
         'price': 300,
@@ -481,12 +416,9 @@ game_board = [
         'houses_cost': 200,
         'hotels_cost': 200,
         'color': 'green',
-        'board_num': 31,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Road(kwargs = {
-        'name': 'oxford street',
+        'name': 'Oxford street',
         'description': "You step onto Oxford Street, London's busiest shopping avenue. Countless stores stretch before you beneath grand nineteenth-century buildings, while an endless stream of shoppers turns the road into a lively marketplace.",
         'type': 'road',
         'price': 300,
@@ -502,17 +434,14 @@ game_board = [
         'houses_cost': 200,
         'hotels_cost': 200,
         'color': 'green',
-        'board_num': 32,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Cell(kwargs = {
-        'name': 'community chest',
+        'name': 'Community chest',
         'description': """An elderly benefactor waves you over to an ornate chest adorned with polished brass. "Take one," they smile. The contents range from miraculous windfalls to awkward obligations. Such is civic generosity.""",
         'type': 'community chest',
     }),
     Road(kwargs = {
-        'name': 'bond street',
+        'name': 'Bond street',
         'description': "You arrive at Bond Street, famed for luxury boutiques, jewellers and art galleries. Elegant Georgian and Victorian buildings frame a district where fortunes are spent and exquisite treasures await discerning visitors.",
         'type': 'road',
         'price': 320,
@@ -528,29 +457,23 @@ game_board = [
         'houses_cost': 200,
         'hotels_cost': 200,
         'color': 'green',
-        'board_num': 34,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Station(kwargs = {
-        'name': 'liverpool st station',
+        'name': 'Liverpool st. Station',
         'description': "Liverpool Street Station buzzes with relentless energy. Beneath its soaring roof, travellers, merchants and commuters weave through the crowds as trains race toward East Anglia and beyond.",
         'type': 'station',
         'price': 200,
         'rent': 25,
         'mortgage_value': 100,
         'unmortgage_value': 110,
-        'board_num': 35,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Cell(kwargs = {
-        'name': 'chance',
-        'description': "A grinning street magician flicks a card high into the air. It lands perfectly in your hand before vanishing from his deck. Whatever is written upon it, your adventure has just become far more interesting.",
+        'name': 'Chance',
+        'description': "A grinning street magician flicks a card high into the air. It lands perfectly in your hand before the deck simply vanishes into thin air. Whatever is written upon the card, your adventure has just become far more interesting.",
         'type': 'chance',
     }),
     Road(kwargs = {
-        'name': 'park lane',
+        'name': 'Park Lane',
         'description': "You reach Park Lane, running beside Hyde Park's eastern edge. Prestigious hotels and luxury residences overlook broad green spaces, offering a striking contrast between bustling traffic and tranquil parkland.",
         'type': 'road',
         'price': 350,
@@ -566,18 +489,15 @@ game_board = [
         'houses_cost': 200,
         'hotels_cost': 200,
         'color': 'blue',
-        'board_num': 37,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
     Cell(kwargs = {
-        'name': 'super tax',
+        'name': 'Super Tax',
         'description': """An exceptionally well-dressed official adjusts their spectacles and presents an intimidatingly thick ledger. "Nothing personal," they sigh, collecting an even larger tribute. Even dragons, you're told, dislike paying this one.""",
         'type': 'tax',
         'tax_amount': 100,
     }),
     Road(kwargs = {
-        'name': 'mayfair',
+        'name': 'Mayfair',
         'description': "You arrive in Mayfair, one of London's most prestigious districts in the West End. Georgian townhouses, luxury hotels and exclusive squares surround you, where elegance, wealth and centuries of history meet at every corner.",
         'type': 'road',
         'price': 400,
@@ -593,9 +513,6 @@ game_board = [
         'houses_cost': 200,
         'hotels_cost': 200,
         'color': 'blue',
-        'board_num': 39,
-        'belongs_to': None,
-        'is_mortgaged': False
     }),
 ]
 
@@ -630,21 +547,21 @@ from monosim.cards import Card, Deck
 def get_community_chest_cards():
 
     return Deck('community chest', [
-        Card("stock_sale", "from sale of stock you get 50.", pay_bank=-50),
-        Card("birthday", "it's your birthday. collect 10 from each player.", pay_each_player = -10),
-        Card("holiday_fund", "holiday fund matures. collect 100", pay_bank=-100),
-        Card("hospital_fees", "hospital fees. pay 100.", pay_bank=100),
-        Card("second_price", "you have won second prize in a beauty contest. collect 100", pay_bank=-100),
-        Card("school_fees", "school fees. pay 50.", pay_bank=-50),
-        Card("jail", "go to jail. go directly to jail. do not pass go. do not collect 200.", action='go_to_jail'),
-        Card("inherit", "you inherit 100.", pay_bank=-100),
-        Card("consultancy", "collect 25 consultancy fee.", pay_bank=-25),
-        Card("income_tax", "income tax refund. collect 20.", pay_bank=-20),
-        Card("insurance", "life insurance matures. collect 100.", pay_bank=-100),
-        Card("bank_error", "bank error in your favour. collect 200.", pay_bank=-200),
-        Card("doctor_fees", "doctor's fees. pay 50.", pay_bank=-50),
-        Card("to_go", "advance to go. collect 200.", go_to = 0),
-        Card("street_repair", "you are assessed for street repairs: pay 40 per house and 115 per hotel you own.", street_repairs=(40,115)),
+        Card("stock_sale", f"From sale of stock you get 50{CURRENCY_SYMBOL}.", pay_bank=-50),
+        Card("birthday", f"It's your birthday. collect 10{CURRENCY_SYMBOL} from each player.", pay_each_player = -10),
+        Card("holiday_fund", f"Holiday fund matures. collect{CURRENCY_SYMBOL} 100", pay_bank=-100),
+        Card("hospital_fees", f"Hospital fees. pay 100{CURRENCY_SYMBOL}.", pay_bank=100),
+        Card("second_price", f"You have won second prize in a beauty contest. collect 100{CURRENCY_SYMBOL}", pay_bank=-100),
+        Card("school_fees", "School fees. pay 50.", pay_bank=-50),
+        Card("jail", f"Go to jail. go directly to jail. do not pass go. do not collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", action='go_to_jail'),
+        Card("inherit", f"You inherit 100{CURRENCY_SYMBOL}.", pay_bank=-100),
+        Card("consultancy", f"Collect 25{CURRENCY_SYMBOL} consultancy fee.", pay_bank=-25),
+        Card("income_tax", f"Income tax refund. collect 20{CURRENCY_SYMBOL}.", pay_bank=-20),
+        Card("insurance", f"Life insurance matures. collect 100{CURRENCY_SYMBOL}.", pay_bank=-100),
+        Card("bank_error", f"Bank error in your favour. collect 200{CURRENCY_SYMBOL}.", pay_bank=-200),
+        Card("doctor_fees", f"Doctor's fees. pay 50{CURRENCY_SYMBOL}.", pay_bank=-50),
+        Card("to_go", f"Advance to go. collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", go_to = 0),
+        Card("street_repair", f"You are assessed for street repairs: pay 40{CURRENCY_SYMBOL} per house and 115{CURRENCY_SYMBOL} per hotel you own.", street_repairs=(40,115)),
         Card("out_of_jail", "get out of jail free. this card may be kept until needed, traded or sold.", action='chance_jail_card', uses_left = 1),
     ])
 
@@ -652,36 +569,36 @@ def get_chance_cards():
     return Deck('chance deck', [
         # classicedition
         Card("out_of_jail", "GET OUT OF JAIL FREE. This card may be kept until needed or traded.", action = 'chance_jail_card', uses_left = 1),
-        Card("general_repairs", "Make General Repairs on All Your Property. For each house pay $25. For each hotel $100.", street_repairs = (25, 100)),
-        Card("speeding", "Speeding fine $15.", pay_bank = 15),
-        Card("election", "You have been elected chairman of the board. Pay each player $50.", pay_each_player = 50),
+        Card("general_repairs", f"Make General Repairs on All Your Property. For each house pay 25{CURRENCY_SYMBOL}. For each hotel 100{CURRENCY_SYMBOL}.", street_repairs = (25, 100)),
+        Card("speeding", f"Your horse was high on coke ; you get a speeding fine of 15{CURRENCY_SYMBOL}.", pay_bank = 15),
+        Card("election", f"You have been elected chairman of the board. Pay each player 50{CURRENCY_SYMBOL}.", pay_each_player = 50),
         Card("back 3 spaces", "Go back three spaces.", advance = -3 ),
-        Card("advance_to_utility", "ADVANCE TO THE NEAREST UTILITY. IF UNOWNED, you may buy it from the Bank. IF OWNED, throw dice and pay owner a total ten times the amount thrown.", advanceToNearest = 'utility' ),
-        Card("dividend", "Bank pays you dividend of $50.", pay_bank = -50),
-        Card("advance_to_railroad", "ADVANCE TO THE NEAREST RAILROAD. If UNOWNED, you may buy it from the Bank. If OWNED, pay owner twice the rental to which they are otherwise entitled.", advanceToNearest= 'station' ), # TODO
-        Card("ppor_tax", "Pay poor tax of $15.", pay_bank = -15),
-        Card("goto_reading_rail", "Take a trip to Reading Rail Road. If you pass \"GO\" collect $200.", go_to = 5),
-        Card("advance", "ADVANCE to Boardwalk.", go_to = 39),
-        Card("advance", "ADVANCE to Illinois Avenue. If you pass \"GO\" collect $200.", go_to = 24),
-        Card("loan_matures", "Your building loan matures. Collect $150.", pay_bank = -150),
-        Card("advance_to_railroad", "ADVANCE TO THE NEAREST RAILROAD. If UNOWNED, you may buy it from the Bank. If OWNED, pay owner twice the rental to which they are otherwise entitled.", advanceToNearest = 'station' ),  # TODO
-        Card("advance", "ADVANCE to St. Charles Place. If you pass \"GO\" collect $200.", go_to = 11),
-        Card("go_to_jail", "Go to Jail. Go Directly to Jail. Do not pass \"GO\". Do not collect $200.", action = 'go_to_jail' ),
+        Card("advance_to_utility", "Advance to the nearest utility. If unowned, you may buy it from the Bank. IF OWNED, throw dice and pay owner a total ten times the amount thrown.", advanceToNearest = 'utility', rent_multiplicator=10 ),
+        Card("dividend", f"Bank pays you dividend of 50{CURRENCY_SYMBOL}.", pay_bank = -50),
+        Card("advance_to_railroad", "Advance to the nearest railroad. If unowned, you may buy it from the Bank. If OWNED, pay owner twice the rental to which they are otherwise entitled.", advanceToNearest= 'station', rent_multiplicator=2 ),
+        Card("poor_tax", f"Pay poor tax of 15{CURRENCY_SYMBOL}.", pay_bank = -15),
+        Card("goto_reading_rail", f"Take a trip to Reading Rail Road. If you pass \"GO\" collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", go_to = 5),
+        Card("advance", "Advance to Boardwalk.", go_to = 39),
+        Card("advance", f"Advance to Illinois Avenue. If you pass \"GO\" collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", go_to = 24),
+        Card("loan_matures", f"Your building loan matures. Collect 150{CURRENCY_SYMBOL}.", pay_bank = -150),
+        Card("advance_to_railroad", "Advance to the nearest railroad. If unowned, you may buy it from the Bank. If OWNED, pay owner twice the rental to which they are otherwise entitled.", advanceToNearest = 'station', rent_multiplicator=2 ),
+        Card("advance", f"ADVANCE to St. Charles Place. If you pass \"GO\" collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", go_to = 11),
+        Card("go_to_jail", f"Go to Jail. Go Directly to Jail. Do not pass \"GO\". Do not collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", action = 'go_to_jail' ),
         # new"", yorkcityedition
         Card("chance_jail_card", "Get out of Jail free. This card may be kept until needed or sold.", action = 'chance_jail_card', uses_left = 1 ),
-        Card("street_repairs", "Make general repairs on all your property. For each house pay $25. For each hotel $100.", street_repairs = ( 25, 100 )),
-        Card("poor_tax", "Pay poor tax of $15.", pay_bank = 15),
-        Card("election", "You have been elected chairman of Con Edison. Pay each player $50.", pay_each_player = 50 ),
-        Card("back_3_spaces", "Go back 3 spaces.", advance = -3),
-        Card("", "Advance token to the nearest Con Edison utility. If UNOWNED you may buy it from the bank. If OWNED, throw dice and pay owner a total of ten times the amount thrown.", advanceToNearest = 'utility' ),   # TODO
-        Card("interest", "Citibank pays you interest of $50.", pay_bank = -50),
-        Card("advance_to_railroad", "Advance token to the nearest Transportation and pay owner Twice the Rental to which they are otherwise entitled. If Transportation is unowned, you may buy it from the Bank.", advanceToNearest = 'station' ),  # TODO
-        #Card("essex_walk", "Take a walk past The Essex House. Advance to GO. Collect $200.", 'advance', 0,32), # TODO
-        Card("regency_ride", "Take a ride to the Regency Hotel! If you pass GO collect $200.", go_to = 31),
-        Card("fifth_avenue", "Take a walk on fifth avenue. Advance token to Trump Tower.", go_to = 39),
+        Card("street_repairs", f"Make general repairs on all your property. For each house pay 25 {CURRENCY_SYMBOL}. For each hotel 100{CURRENCY_SYMBOL}.", street_repairs = ( 25, 100 )),
+        Card("poor_tax", f"Pay poor tax of 15{CURRENCY_SYMBOL}.", pay_bank = 15),
+        Card("election", f"You have been elected chairman of Con Edison. Pay each player 50{CURRENCY_SYMBOL}.", pay_each_player = 50 ),
+        Card("back_3_spaces", "You step on a banana skin and break a leg. Go back 3 spaces.", advance = -3),
+        Card("", "Advance to the nearest Con Edison utility. If UNOWNED you may buy it from the bank. If OWNED, throw dice and pay owner a total of ten times the amount thrown.", advanceToNearest = 'utility', rent_multiplicator=10 ),
+        Card("interest", f"Citibank pays you interest of 50{CURRENCY_SYMBOL}.", pay_bank = -50),
+        Card("advance_to_railroad", "Advance  to the nearest Transportation and pay owner twice the Rental to which they are otherwise entitled. If Transportation is unowned, you may buy it from the Bank.", advanceToNearest = 'station', rent_multiplicator=2 ),
+	    Card("essex_walk", f"Take a walk past The Essex House. Advance to GO. Collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", go_to = 32+1),
+        Card("regency_ride", f"Take a ride to the Regency Hotel! If you pass GO collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", go_to = 31),
+        Card("fifth_avenue", "Take a walk on fifth avenue. Advance to Trump Tower.", go_to = 39),
         Card("advance_to_13", "Advance to thirteen.", go_to = 13),
-        Card("mutual_funds", "Your Smith Barney mutual fund pays dividend. Collect $150.", pay_bank = -150),
-        Card("advance_to_railroad", "Advance token to the nearest Transportation and pay owner Twice the Rental to which they are otherwise entitled.\n\nIf Transportation is unowned, you may buy it from the Bank.", advanceToNearest = 'station'),    # TODO
-        Card("central_park", "Catch a bus to Central Park. If you pass GO, collect $200.", go_to =  9),
-        Card("go_to_jail", "Go directly to Jail. Do not pass GO, do not collect $200.", action = 'go_to_jail' ),
+        Card("mutual_funds", f"Your Smith Barney mutual fund pays dividend. Collect 150{CURRENCY_SYMBOL}.", pay_bank = -150),
+        Card("advance_to_railroad", "Advance to the nearest Transportation and pay owner twice the Rental to which they are otherwise entitled.\n\nIf Transportation is unowned, you may buy it from the Bank.", advanceToNearest = 'station', rent_multiplicator=2),
+        Card("central_park", f"Catch a bus to Central Park. If you pass GO, collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", go_to =  9),
+        Card("go_to_jail", f"Go directly to Jail. Do not pass GO, do not collect {GO_AMOUNT}{CURRENCY_SYMBOL}.", action = 'go_to_jail' ),
     ])

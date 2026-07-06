@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-def roll_dice_physical(d=6,n=2):
+async def roll_dice_physical(d=6,n=2):
     """ Takes input from a real dice roll
 
     :return: (tuple) two int values between 1 and 6 drawn from a uniform distribution.
@@ -17,13 +17,14 @@ def roll_dice_physical(d=6,n=2):
             return res
 
 
-def roll_dice_auto(d=6,n=2):
+async def roll_dice_auto(d=6,n=2):
     """ Simulate the roll of two dice. Returns two int values between 1 and 6.
 
     :return: (tuple) two int values between 1 and 6 drawn from a uniform distribution.
     """
+    from random import randint
 
-    return tuple([random.randint(1, d) for _ in range(n)])
+    return tuple([randint(1, d) for _ in range(n)])
 
 
 if __name__ == '__main__':
