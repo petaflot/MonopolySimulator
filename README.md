@@ -8,11 +8,13 @@
 
 Monopoly simulator allows you to rapidly simulate the game of monopoly with N players. While the library provides an implementation of a simple naive player ("dummy"), their behaviour can be modified to test hypotheses about the best strategies and train intelligent agents with Machine Learning.
 
-Players can also be interactive.
+In the current fork, players can also be interactive using a telnet client (such as [pseudotelnet](https://github.com/petaflot/pseudotelnet))
+
+The official Monopoly rules have been slightly modified to make the game a little less boring.
 
 ## Install
 
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install monopoly_simulator.
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install *MonopolySimulator*.
 
 ```bash
 pip install -i https://test.pypi.org/project/MonopolySimulator/0.0.1/
@@ -25,6 +27,8 @@ pip install -i https://test.pypi.org/project/MonopolySimulator/0.0.1/
 
 ## Usage
 A game is started setting the table's components: board, community chest cards and bank. Each player in the game receives these components and meets the other opponents (e.g., player1.meet_other_players([player2])). Each game's turn is run executing the command player.play(). The game ends when N-1 players have lost.
+
+NOTE: this is somewhat deprecated
 
 ```python
 from monosim.player import Player
