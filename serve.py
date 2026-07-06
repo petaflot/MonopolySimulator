@@ -73,7 +73,7 @@ class Game:
 					player_has_rolled_dice = False
 					writeX(player.writer, f"{player._name}: it's your turn to play.".encode() )
 					await player.writer.drain()
-					current_rent_amount = self._game_board[player._position].estimate_rent(player)	
+					current_rent_amount = self._game_board[player._position].estimate_rent(player)	# meeh.. can't we get rid of this call?
 					cell = self._game_board[player._position]
 
 					# reading input from *all* players
@@ -86,31 +86,21 @@ class Game:
 							continue
 
 						try:
-							if not any([c.startswith(cmd[0]) for c in (b'make_offer', b'bid')]):
+							if not any([c.startswith(cmd[0]) for c in (b'offer', b'bid', b'drop', b'take', b'give', \
+									b'tell', b'shout', b'say', b'examine', b'x', b'score', b'look', b'manage', b'help')]):
+								# these actions are reserved to the player whose turn it is
+
 								if sender != player:
 									writeX( sender.writer, b"Not your turn to play" )
 									await sender.writer.drain()
+
 								if b'pass'.startswith(cmd[0]) or (b'end'.startswith(cmd[0]) and b'turn'.startswith(cmd[1])):
 									if not player_has_rolled_dice:
 										writeX( sender.writer, b"You cannot end your turn just yet: need to roll the dice." )
 									else:
 										writeX( sender.writer, b"You end your turn." )
 										break
-								elif b'score'.startswith(cmd[0]):
-									writeX(player.writer, player.get_score(self.turn_count).encode() )
-								elif b'look'.startswith(cmd[0]):
-									writeX( player.writer, cell.description.encode('utf-8') )
-								elif b'examine'.startswith(cmd[0]) or b'x'.startswith(cmd[0]):
-									cmd[0] = b'examine'
-									what = cmd[1]
-									if b'road'.startswith(what) or \
-											b'property'.startswith(what) or \
-											b'station'.startswith(what) or \
-											b'utility'.startswith(what) or \
-											b'cell'.startswith(what):
-										writeX( player.writer, cell.examine().encode('utf-8') )
-									else:
-										raise IndexError
+
 								elif b'roll'.startswith(cmd[0]):
 									cmd[0] = b'roll'
 									if b'dice'.startswith(cmd[1]):
@@ -131,18 +121,12 @@ class Game:
 										await self.broadcast(f"""{player._name} rolls themselves a cigarette""")
 
 									if player._game._game_board[player._position].type != 'jail' and not player._jail_count:
-										await player.advance(player._dice_value)
-										cell = self._game_board[player._position]
+										cell, current_rent_amount = await player.advance(player._dice_value)
+										player.rent_paid = False if current_rent_amount else True
+
 									elif self._jail_count:
+										current_rent_amount, player.rent_paid = 0, True	# NOTE it would make sense to set rent_paid to False
 										writeX( player.writer, f"You are in jail with {player._jail_count} days left to rot here. Unless you want to pay?".encode('utf-8') )
-
-
-									current_rent_amount = self._game_board[player._position].estimate_rent(player)	
-									player.rent_paid = False if current_rent_amount else True
-									if current_rent_amount:
-										await self.broadcast(f"{player._name} landed on {cell}, rent is {current_rent_amount}{CURRENCY_SYMBOL} ; the weather is {random.choice(['great','so-so','bad','horrible'])}", NOT=(player, ))
-									else:
-										await self.broadcast(f"{player._name} landed on {cell} ; the weather is {random.choice(['great','so-so','bad','horrible'])}", NOT=(player, ))
 
 									# TODO make this explicit.. with 'take'
 									if len(cell.inventory):
@@ -183,11 +167,13 @@ class Game:
 										self.community_cards_deck.discard( await self.community_cards_deck.draw(player) )
 										# just to be safe, doesn't hurt (whatever the card is)
 										cell = self._game_board[player._position]
+										current_rent_amount = cell.estimate_rent(player)
 
 									elif cell.type == 'chance':
 										self.chance_cards_deck.discard( await self.chance_cards_deck.draw(player) )
 										# just to be safe, doesn't hurt (whatever the card is)
 										cell = self._game_board[player._position]
+										current_rent_amount = cell.estimate_rent(player)
 
 
 
@@ -207,14 +193,7 @@ class Game:
 									else:
 										raise IndexError
 									await sender.writer.drain()
-								elif b'mortgage'.startswith(cmd[0]):
-										# TODO cell selection!
-										await player.mortgage( cell )
-										await self.broadcast(f"{player._name} has mortgaged {cell.name}".format(player._name, cell.name))
-								elif b'unmortgage'.startswith(cmd[0]):
-										# TODO cell selection!
-										await player.unmortgage( cell )
-										await self.broadcast(f"{player._name} unmortgaged {cell.name}".format(player._name, cell.name))
+
 								elif b'pay'.startswith(cmd[0]):
 									cmd[0] = b'pay'
 									if b'rent'.startswith(cmd[1]):
@@ -243,19 +222,40 @@ class Game:
 									else:
 										writeX( player.writer, "Pay what?" )
 										await player.writer.drain()
-								elif b'choose'.startswith(cmd[0]):
-									cmd[0] = b'choose'
-									if b'mortgage'.startswith(cmd[1]):
-										for p in await player.choose_mortgage_properties( player.list_mortgageable_properties ):
-											await self.mortgage(p)
-									elif b'unmortgage'.startswith(cmd[1]):
-										await player.choose_unmortgage_properties()
+
 								else:
 									writeX( player.writer, b"Not a valid command" )
 									await player.writer.drain()
 							else:
+								# these actions are available to any player, anytime
 								if not len(cmd[0]):
 									pass
+
+								elif b'score'.startswith(cmd[0]):
+									writeX(sender.writer, sender.get_score(self.turn_count).encode() )
+
+								elif b'look'.startswith(cmd[0]):
+									writeX( sender.writer, cell.description.encode('utf-8') )
+
+								elif b'examine'.startswith(cmd[0]) or b'x'.startswith(cmd[0]):
+									cmd[0] = b'examine'
+									what = cmd[1]
+									if b'road'.startswith(what) or \
+											b'property'.startswith(what) or \
+											b'station'.startswith(what) or \
+											b'utility'.startswith(what) or \
+											b'cell'.startswith(what):
+										writeX( sender.writer, self._game_board[sender._position].examine().encode('utf-8') )
+									else:
+										raise IndexError
+
+								elif b'manage'.startswith(cmd[0]):
+									for p, action in await player.choose_mortgage_properties( player.list_mortgageable_properties ):
+										if action == 'mortgage':
+											await self.mortgage(p)
+										if action == 'unmortgage':
+											await self.unmortgage(p)
+
 								elif b'bid'.startswith(cmd[0]):
 									cmd[0] = b'bid'
 									try:
@@ -277,6 +277,7 @@ class Game:
 									else:
 										# TODO prevent bidding if cell is not buyable
 										await self.broadcast(f"{player._name} bids {cell.name} (NotImplementedError)")
+
 								elif b'offer'.startswith(cmd[0]):
 									cmd[0] = b'offer'
 									try:
@@ -285,6 +286,7 @@ class Game:
 										writeX( sender.writer, f"Could not convert {cmd[1].decode('utf-8')} to an integer amount".encode('utf-8'))
 									else:
 										await self.broadcast(f"{player._name} offers {amount}{CURRENCY_SYMBOL} for {cell.name} (NotImplementedError)")
+
 								elif b'help'.startswith(cmd[0]):
 									writeX( sender.writer, """Available commands:
     roll			[dice]
@@ -299,12 +301,10 @@ class Game:
 	give			<something> to <someone>	TODO
 	drop			<something>					TODO
 	take			<something>					TODO
-	mortgage		mortgage propery
-	unmortgage		unmortgage propery
 	pay				<rent|bail>
-	choose			<mortgage|unmortgage>		TODO -> manage
-	bid				bid amount on				TODO
-	offer			offer amount for			TODO
+	manage			manage property mortgaging
+	bid				[property] (put property for auction)		TODO
+	offer			<amount> (offer amount for current auction)	TODO
 	say				<something>					TODO
 	shout			<something>					TODO
 	tell			<someone> <something>		TODO
@@ -396,6 +396,7 @@ class MonopolyServer:
 		else:
 			addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
 			logger.info(f"{self.name}: MonopolyServer starting {addrs}:{self.port=}")
+			print(f"{self.name}: listening on {addrs}:{self.port=}")
 
 			try:
 				async with server:

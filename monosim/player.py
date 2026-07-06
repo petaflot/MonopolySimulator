@@ -65,7 +65,8 @@ class Player:
 		self._input_queue = asyncio.Queue()
 		writeX(self.writer, prompt.encode('utf-8'))
 		res = (await self._input_queue.get())['uuids'][1]	# 'context'
-		delattr( s.decode('utf-8')
+		delattr( self, '_input_queue')
+		return res.decode('utf-8')
 
 	def __str__(self):
 		return f"<Player:{self._name}>"
@@ -110,9 +111,9 @@ class Player:
 				return ''
 
 		return f"""### Score for {self._name}, in {self._game._game_board[self._position].name} (cell {self._position:>2}) ###
-	last dice value:	{self._dice_value:>5}
-	cash:			   {self._cash:>5}{CURRENCY_SYMBOL}
-	mortgageable amount:{self._properties_total_mortgageable_amount:>5}{CURRENCY_SYMBOL}
+	last dice value:     {self._dice_value:>5}
+	cash:                {self._cash:>5}{CURRENCY_SYMBOL}
+	mortgageable amount: {self._properties_total_mortgageable_amount:>5}{CURRENCY_SYMBOL}
 	owned utilities ({self.get_owned_utilities_count()}): {', '.join([u.name for u in self._list_owned_utilities])}
 	owned stations  ({self.get_owned_stations_count()}): {', '.join([s.name for s in self._list_owned_stations])}
 	owned roads	({len(self._list_owned_roads):>2}): {get_roads_owned()}
@@ -746,11 +747,19 @@ class Player:
 			else:
 				await self._game.broadcast(f"{self._name} passed 'Go' and collected {GO_AMOUNT}{CURRENCY_SYMBOL}")
 
+		cell = self._game._game_board[self._position]
+		current_rent_amount = self._game._game_board[self._position].estimate_rent(self)
+		if current_rent_amount:
+			await self._game.broadcast(f"{self._name} landed on {cell.name}, rent is {current_rent_amount}{CURRENCY_SYMBOL} ; the weather is {random.choice(['great','so-so','bad','horrible'])}" )
+		else:
+			await self._game.broadcast(f"{self._name} landed on {cell.name} ; the weather is {random.choice(['great','so-so','bad','horrible'])}" )
 		writeX( self.writer, self._game._game_board[self._position].description.encode('utf-8') )
+
+		return cell, current_rent_amount
 
 	async def go_to(self, where):
 		if self._position > where: self._position -= len(self._game._game_board)
-		await self.advance(where-self._position)
+		return await self.advance(where-self._position)
 		#print(f"go_to({where})")
 
 
@@ -759,8 +768,7 @@ class Player:
 		while True:
 			i += 1
 			if self._game._game_board[(self._position+i)%len(self._game._game_board)].type == what:
-				await self.advance(i) # TODO hook for rent changes (see TODO in monosim/board.py)
-				return
+				return await self.advance(i) # TODO hook for rent changes (see TODO in monosim/board.py)
 
 	async def play(self):
 		#cprint(f"It's {self._name}'s turn.",'cyan')
@@ -769,9 +777,8 @@ class Player:
 		tuple_dices = self.roll_dice()
 		self._dice_value = tuple_dices[0] + tuple_dices[1]
 		if self._game._game_board[self._position].type != 'jail' and not self._jail_count:
-			self.advance(self._dice_value)
+			board_cell, rent = self.advance(self._dice_value)
 
-		board_cell = self._game._game_board[self._position]
 		#print(f"""\tYou landed on {self._game._game_board[self._position]} ; the weather is {random.choice(['great','so-so','bad','horrible'])}""")
 
 		# Buy a house or hotel
@@ -859,7 +866,6 @@ class Player:
 						self.bid(board_cell, 'temp')
 				elif not board_cell.is_mortgaged:
 					# Have enough money to rent?
-					rent = board_cell.estimate_rent(self)
 					if self.have_enough_money(rent):
 						await self.pay_rent(board_cell, rent)
 					else:

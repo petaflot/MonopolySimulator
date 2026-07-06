@@ -37,6 +37,8 @@ class Deck:
 	def discard(self, cards):
 		self.discard_pile.extend([c for c in cards if c is not None])
 
+		# TODO if applicable, return cell and rent
+		print(f"Card.discard(): {self.action=}")
 
 class Card:
 	def __init__(self, name, text, **kwargs ):
