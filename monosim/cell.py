@@ -62,19 +62,20 @@ class Road(Cell):
 
 	def examine(self):
 		# TODO "highlight" current rent
+		# TODO display how many houses and hotels are present, show if mortgaged
 		return f"""This is {self.name} ({self.color}) ; it is {'not owned by anyone' if self.belongs_to is None else f"owned by {self.belongs_to._name}"}
-	Price:			 {self.price:>5}{CURRENCY_SYMBOL}
-	Mortgage value:	{self.mortgage_value:>5}{CURRENCY_SYMBOL}
+	Price:             {self.price:>5}{CURRENCY_SYMBOL}
+	Mortgage value:    {self.mortgage_value:>5}{CURRENCY_SYMBOL}
 	Unmortgage value:  {self.unmortgage_value:>5}{CURRENCY_SYMBOL}
-	Rent:			  {self.rent:>5}{CURRENCY_SYMBOL} ({self.rent_with_color_set}{CURRENCY_SYMBOL})
+	Rent:              {self.rent:>5}{CURRENCY_SYMBOL} ({self.rent_with_color_set}{CURRENCY_SYMBOL})
 		with 1 house:  {self.rent_with_1_houses_0_hotels:>5}{CURRENCY_SYMBOL}
 		with 2 houses: {self.rent_with_2_houses_0_hotels:>5}{CURRENCY_SYMBOL}
 		with 3 houses: {self.rent_with_3_houses_0_hotels:>5}{CURRENCY_SYMBOL}
 		with 4 houses: {self.rent_with_4_houses_0_hotels:>5}{CURRENCY_SYMBOL}
 		with 1 hotel:  {self.rent_with_4_houses_1_hotels:>5}{CURRENCY_SYMBOL}
 	Building costs:
-		house:		 {self.houses_cost:>5}{CURRENCY_SYMBOL}
-		hotel:		 {self.hotels_cost:>5}{CURRENCY_SYMBOL}
+		house:         {self.houses_cost:>5}{CURRENCY_SYMBOL}
+		hotel:         {self.hotels_cost:>5}{CURRENCY_SYMBOL}
 
 """ + super().examine()
 

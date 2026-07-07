@@ -104,12 +104,15 @@ class Game:
 				for player in self.list_players:
 					print(f"it's {player._name}'s turn")
 					player_has_rolled_dice = False
+					player.dice_value = 'n/a'
 					#writeX(player.writer, f"{player._name}: it's your turn to play.".encode() )
 					await player.writer.drain()
 					cell = self._game_board[player._position]
 
 					if player._jail_count:
 						writeX( player.writer, f"You are in jail with {player._jail_count} days left to rot here. Unless you want to pay {50*player._jail_count}{CURRENCY_SYMBOL} to bail out?".encode('utf-8') )
+					elif cell.belongs_to is player:
+						writeX( player.writer, f"You are on at home on {cell.name} ; the weather is {random.choice(['great','so-so','bad','horrible'])} and it's your turn to play.".encode('utf-8') )
 					else:
 						try:
 							writeX( player.writer, f"You are on {cell.name} ({cell.color}) ; the weather is {random.choice(['great','so-so','bad','horrible'])} and it's your turn to play.".encode('utf-8') )
@@ -126,8 +129,7 @@ class Game:
 							continue
 
 						try:
-							if not any([c.startswith(cmd[0]) for c in (b'offer', b'bid', b'drop', b'take', b'give', \
-									b'tell', b'shout', b'say', b'examine', b'x', b'score', b'look', b'manage', b'help')]):
+							if any([c.startswith(cmd[0]) for c in (b'pass', b'roll', b'buy', b'pay')]):
 								# these actions are reserved to the player whose turn it is
 
 								if sender != player:
@@ -333,11 +335,7 @@ class Game:
 										raise IndexError
 
 								elif b'manage'.startswith(cmd[0]):
-									for p, action in await player.choose_mortgage_properties( player.list_mortgageable_properties ):
-										if action == 'mortgage':
-											await self.mortgage(p)
-										if action == 'unmortgage':
-											await self.unmortgage(p)
+									await player.manage_properties()
 
 								elif b'bid'.startswith(cmd[0]):
 									cmd[0] = b'bid'
@@ -394,6 +392,10 @@ class Game:
 	help			this message
 	?				alias for 'help'
 """)
+
+								else:
+									writeX( sender.writer, f"{cmd[0].decode('utf-8')} what was that.. are you drunk?".encode('utf-8') )
+
 						except (CannotDoThat, ) as e:
 							writeX( sender.writer, str(e).encode('utf-8') )
 						except IndexError as e:

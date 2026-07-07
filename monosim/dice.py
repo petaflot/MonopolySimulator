@@ -26,7 +26,6 @@ async def roll_dice_auto(d=6, n=2, player = None, game = None):
 
 	:return: (tuple) two int values between 1 and 6 drawn from a uniform distribution.
 	"""
-	return 16,14
 	from random import randint
 
 	tup = tuple([randint(1, d) for _ in range(n)])

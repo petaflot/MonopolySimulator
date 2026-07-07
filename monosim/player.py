@@ -107,7 +107,7 @@ class Player:
 				if len(color_roads) == len(color_to_house_mapping):
 					color = color+'*'
 				if len(color_roads):
-					colors.append(f"\t\t{color:<{COLOR_STR_LEN}}: "+', '.join([road.name for road in color_roads]))
+					colors.append(f"\t\t{color:<{COLOR_STR_LEN}}: "+', '.join([road.name if not road.is_mortgaged else road.name+'*' for road in color_roads]))
 			if len(colors):
 				return '\n'+'\n'.join(colors)
 			else:
@@ -117,9 +117,9 @@ class Player:
 	last dice value:     {self._dice_value:>5}
 	cash:                {self._cash:>5}{CURRENCY_SYMBOL}
 	mortgageable amount: {self._properties_total_mortgageable_amount:>5}{CURRENCY_SYMBOL}
-	owned utilities ({self.get_owned_utilities_count()}): {', '.join([u.name for u in self._list_owned_utilities])}
-	owned stations  ({self.get_owned_stations_count()}): {', '.join([s.name for s in self._list_owned_stations])}
-	owned roads	({len(self._list_owned_roads):>2}): {get_roads_owned()}
+	owned utilities ({self.get_owned_utilities_count()}): {', '.join([s.name if not s.is_mortgaged else s.name+'*' for s in self._list_owned_utilities])}
+	owned stations  ({self.get_owned_stations_count()}): {', '.join([s.name if not s.is_mortgaged else s.name+'*' for s in self._list_owned_stations])}
+	owned roads    ({len(self._list_owned_roads):>2}): {get_roads_owned()}
 	owned houses: {sum([i[0] for i in self._dict_owned_houses_hotels.values()]) -4*owned_hotels}, owned hotels: {owned_hotels}
 ###"""
 
@@ -179,7 +179,7 @@ class Player:
 		elif self._cash < amount:
 			raise InsufficientFundsAvailable
 		else:
-			writeX( self.writer, f"You pay the bank {amount}{CURRENCY_SYMBOL}.".encode('utf8') )
+			writeX( self.writer, f"You pay the bank {amount}{CURRENCY_SYMBOL} ({reason}).".encode('utf8') )
 			await self._game.broadcast(f"{self._name} pays the bank {amount}{CURRENCY_SYMBOL} for {reason}.", NOT=(self,))
 			self._cash -= self._game.bank.pay(amount)
 
@@ -328,6 +328,51 @@ class Player:
 		self._properties_total_mortgageable_amount += property_obj.unmortgage_value
 		await self.pay_bank(property_obj.unmortgage_value, 'unmortgage')
 
+	async def manage_properties(self):
+		""" interactive property management (mortgage/unmortgage/sell) """
+		dict_mortgage_properties = {p: False for p in self.list_all_properties}   # temp toggle list
+
+		# TODO house management
+		writeX( self.writer, f"Your banker picks up the phone ; his voice is unpleasant and he seems very much annoyed.".encode('utf-8'))
+
+
+		def list_preselection():
+			# TODO better/proper table!
+			outstr =  f"\n\t    {'name':<21} price     | mortgage value | unmortage value | toggle\n"
+			i, a = 0, 0
+			for p, v in dict_mortgage_properties.items():
+				outstr += f"\t{i:>2}: {p.name:<21} {p.price:<3}{CURRENCY_SYMBOL} | {'+'+str(p.mortgage_value)+CURRENCY_SYMBOL if not p.is_mortgaged else '---'} | {'-'+str(p.unmortgage_value)+CURRENCY_SYMBOL if p.is_mortgaged else '---'} | {'[*]' if v else '[ ]'}\n"
+				if v:
+					if p.is_mortgaged:
+						a = a-p.unmortgage_value
+					else:
+						a = a+p.mortgage_value
+				i += 1
+			outstr += f"\nTotal amount from selection changes: {a}{CURRENCY_SYMBOL} (cash after: {self._cash+a}{CURRENCY_SYMBOL})\n"
+			writeX( self.writer, outstr.encode('utf-8'))
+
+		while True:
+			list_preselection()
+
+			try:
+				p = list(dict_mortgage_properties.keys())[int(res := await self.input("Select property to toggle ; type 'OK' when done."))]
+				dict_mortgage_properties[p] = not dict_mortgage_properties[p]
+			except (IndexError, ValueError):
+				if 'ok'.startswith(res.lower()):
+					amount = 0
+					for p, v in dict_mortgage_properties.items():
+						if v:
+							if p.is_mortgaged:
+								await self.unmortgage(p)
+								amount -= p.unmortgage_value
+							else:
+								await self.mortgage(p)
+								amount += p.mortgage_value
+					writeX( self.writer, f"Your banker says your account balance is now {self._cash} (difference is {amount}{CURRENCY_SYMBOL}) and hangs up without saying goodbye. You think to yourself that person is very rude.".encode('utf-8'))
+					return
+				writeX( self.writer, f"Whut?".encode('utf-8'))
+
+
 	async def choose_mortgage_properties(self, list_mortgageable_properties, amount):
 		""" Return a list of properties to mortgage given a required amount. This function
 		doesn't take into account the cash available to the player. Example: if player owns 100$
@@ -403,17 +448,12 @@ class Player:
 				return [p for p, v in dict_unmortgage_properties.items() if v]#dict_unmortgage_properties[p]]
 
 	@property
-	def list_mortgageable_properties(self):
+	def list_all_properties(self):
 		#  choose properties to mortgage
-		list_mortgageable_properties = \
-			[road for road in self._list_owned_roads if road.is_mortgaged is False] +\
-			[station for station in self._list_owned_stations if station.is_mortgaged is False] +\
-			[utility for utility in self._list_owned_utilities if utility.is_mortgaged is False]
-
-		if len(list_mortgageable_properties) == 0:
-			raise Exception('player {} has no properties to mortgage'.format(self._name))
-
-		return list_mortgageable_properties
+		return \
+			[road for road in self._list_owned_roads] +\
+			[station for station in self._list_owned_stations] +\
+			[utility for utility in self._list_owned_utilities]
 
 
 	async def get_money_from_mortgages(self, amount_required):
@@ -979,6 +1019,7 @@ class PlayerBot(Player):
 		# This function is incomplete. In reality, the player should decide whether to mortgage or bid to try buuying
 		# the road at a lower (available) price.
 		return 'mortgage'
+
 
 	async def choose_mortgage_properties(self, list_mortgageable_properties, amount):
 		# Note: this function is in reality more complex. This is just a temporary logic
