@@ -8,11 +8,15 @@ from termcolor import cprint
 
 from synaptism.protocol import writeX
 
+import traceback
+
 class Deck:
 	def __init__(self, name, cards ):
 		self.name = name
 		self.cards = []
 		self.discard_pile = cards
+		for card in cards:
+			card.deck = self
 		print(f"{self} initialized with {len(cards)} cards")
 
 	def __str__(self):
@@ -22,7 +26,8 @@ class Deck:
 		if not len(self.cards):
 			cprint(f"{self}: shuffling cards",'grey')
 			while len(self.discard_pile):
-				self.cards.append(self.discard_pile.pop(randint(0, len(self.discard_pile)-1)))
+				#self.cards.append(self.discard_pile.pop(randint(0, len(self.discard_pile)-1)))
+				self.cards.append(self.discard_pile.pop())
 			# on coupe le tas?
 
 		if len(self.cards) >= n:
@@ -37,8 +42,6 @@ class Deck:
 	def discard(self, cards):
 		self.discard_pile.extend([c for c in cards if c is not None])
 
-		# TODO if applicable, return cell and rent
-		print(f"Card.discard(): {self.action=}")
 
 class Card:
 	def __init__(self, name, text, **kwargs ):
@@ -51,14 +54,16 @@ class Card:
 			self.action = kwargs['action']
 		except KeyError:
 			try:
-				# TODO loop over kwargs.items(), red rid of GotAction
-				for action in ('pay_bank', 'pay_each_player', 'street_repairs', 'advance', 'advanceToNearest', 'go_to'):
-					try:				setattr(self, action, kwargs[action])
-					except KeyError:	pass
-					else:			   raise GotAction(self, action)
-				raise ValueError(action)
+				for action in ('pay_bank', 'pay_each_player', 'street_repairs', 'advance', 'advance_to_nearest', 'go_to'):
+					try:
+						setattr(self, action, kwargs[action])
+						raise GotAction( self, action )
+					except KeyError:
+						pass
 			except GotAction:
 				pass
+			else:
+				raise ValueError(action)
 
 		self.rent_multiplicator = kwargs.get('rent_multiplicator', 1)
 
@@ -72,7 +77,7 @@ class Card:
 		#cprint(f"{player._name} drew {self} ({self.uses_left})", 'yellow')
 		if not self.uses_left:
 			writeX( player.writer, f"You draw a card and use it ; it says \"{self.text}\"".encode('utf-8') )
-			await player._game.broadcast( f"{player._name} draw a card and uses it immediately", NOT=(player, ) )
+			await player._game.broadcast( f"{player._name} draws a '{self.name}' card and uses it immediately", NOT=(player, ) )
 			# card is used immediately and returns to stack
 			return await self.use(player)
 		else:
@@ -85,11 +90,17 @@ class Card:
 	async def use(self, player):
 		player.rent_multiplicator = self.rent_multiplicator
 		try:
-			await getattr(player, self.action)( getattr(self, self.action) )
+			# one of ('pay_bank', 'pay_each_player', 'street_repairs', 'advance', 'advance_to_nearest', 'go_to'):
+			await getattr(player, self.action)( getattr(self, self.action), self.name )
 			#print(f"Card.use(): {getattr(player, self.action)} {getattr(self, self.action)}")
 		except AttributeError:
-			await getattr(player, self.action)()
-			#print(f"Card.use(): {getattr(player, self.action)}")
+			# one of 'chance_jail_card', 'go_to_jail'
+			try:
+				await getattr(player, self.action)()
+				#print(f"Card.use(): {getattr(player, self.action)}")
+			except Exception as e:
+				traceback.print_exception(type(e), e, e.__traceback__)
+
 
 		if self.uses_left != 0:
 			self.uses_left -= 1

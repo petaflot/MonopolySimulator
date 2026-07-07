@@ -6,6 +6,7 @@ class Cell:
 		for k, v in kwargs.items():
 			setattr(self, k, v)
 
+		self.belongs_to = None
 		self.inventory = []
 
 	def __str__(self):

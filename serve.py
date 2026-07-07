@@ -40,6 +40,28 @@ class Game:
 				await player.writer.drain()
 
 	async def game_loop(self, players):
+		async def clear_debts( player, credit = 50//2 ):
+			""" the state gives back 50% of what they get from jailtime to clear debts at 50% value
+
+				from this it is absolutely clear that paying debts through jail is bad for all players involved:
+				- debtor gets to pay twice the initial amount
+				- creditor gets half the initial amount
+				- state ends up with 1.5 x the initial amount
+			"""
+			if not len(player._debts):
+				return
+
+			while credit:
+				creditor, amount = player._debts.pop(0)
+				if credit >= amount:
+					await creditor.pay_bank( -credit//2, 'debt recovery')
+					credit -= amount
+				else:
+					await creditor.pay_bank( -credit//2, 'debt recovery')
+					player._debts.append(( creditor, amount-credit ))
+					break
+
+
 		for player_name, reader, writer in players:
 			self.list_players.append(
 					p := Player(player_name.decode('utf-8'), self, reader, writer),
@@ -63,6 +85,17 @@ class Game:
 		await self.broadcast(f"{self.name}: game starts.")
 		self.has_started = True
 
+		"""
+		for card in self.community_cards_deck.discard_pile:
+			if card.name == 'out of jail':
+				player.inventory.append(card)
+				self.community_cards_deck.discard_pile.remove(card)
+				print(f"{player._name} received out of jail card")
+
+		player._debts.append((player, 100))
+		print(f"{player._name} starts with 100{CURRENCY_SYMBOL} debt")
+		"""
+
 		try:
 			while True:
 				await self.broadcast("A new day has risen.")
@@ -71,10 +104,17 @@ class Game:
 				for player in self.list_players:
 					print(f"it's {player._name}'s turn")
 					player_has_rolled_dice = False
-					writeX(player.writer, f"{player._name}: it's your turn to play.".encode() )
+					#writeX(player.writer, f"{player._name}: it's your turn to play.".encode() )
 					await player.writer.drain()
-					current_rent_amount = self._game_board[player._position].estimate_rent(player)	# meeh.. can't we get rid of this call?
 					cell = self._game_board[player._position]
+
+					if player._jail_count:
+						writeX( player.writer, f"You are in jail with {player._jail_count} days left to rot here. Unless you want to pay {50*player._jail_count}{CURRENCY_SYMBOL} to bail out?".encode('utf-8') )
+					else:
+						try:
+							writeX( player.writer, f"You are on {cell.name} ({cell.color}) ; the weather is {random.choice(['great','so-so','bad','horrible'])} and it's your turn to play.".encode('utf-8') )
+						except AttributeError:
+							writeX( player.writer, f"You are on {cell.name} ; the weather is {random.choice(['great','so-so','bad','horrible'])} and it's your turn to play.".encode('utf-8') )
 
 					# reading input from *all* players
 					while True:
@@ -82,7 +122,7 @@ class Game:
 							sender, dic = self.input_queue.get_nowait()
 							cmd = dic['uuids'][1].split(b' ', 1)	# 'context'
 						except asyncio.queues.QueueEmpty:
-							await asyncio.sleep(1)
+							await asyncio.sleep(.1)
 							continue
 
 						try:
@@ -95,101 +135,132 @@ class Game:
 									await sender.writer.drain()
 
 								if b'pass'.startswith(cmd[0]) or (b'end'.startswith(cmd[0]) and b'turn'.startswith(cmd[1])):
-									if not player_has_rolled_dice:
+									if player._jail_count:
+										player._jail_count -= 1
+
+										# tweak, so one can decide not to try and exit jail by rollng the dice
+										if not player_has_rolled_dice:
+
+											try:
+												await player.pay_bank(50, 'daily jail fee')
+											except InsufficientFundsAvailable:
+												try:
+													if not await player.is_bankrupt(cell.price):
+														await player.pay_bank(50, 'daily jail fee')
+												except InsufficientFundsAvailable:
+													await self._game.bcellcast(f"{self._name} has insufficient funds to exit jail, dies in their cell and loses the game. RIP.")
+													raise
+
+											await clear_debts(player, 50//2)
+
+										if not player._jail_count:
+											cell = await player.get_out_of_jail(advance=False)
+										writeX( sender.writer, b"You end your turn." )
+										break
+
+									elif not player_has_rolled_dice:
 										writeX( sender.writer, b"You cannot end your turn just yet: need to roll the dice." )
+
 									else:
 										writeX( sender.writer, b"You end your turn." )
 										break
 
 								elif b'roll'.startswith(cmd[0]):
 									cmd[0] = b'roll'
+
 									if b'dice'.startswith(cmd[1]):
 										if player_has_rolled_dice:
 											writeX( player.writer, "You have already rolled your dice this turn.".encode('utf-8') )
 											continue
-										player_has_rolled_dice = True
 
-										if not player.rent_paid and current_rent_amount:
-											player._debts.append( cell.belongs_to, current_rent_amount)
-											await self.broadcast(f"""{player._name} committed filouterie d'auberge! Total debt is now {sum([a for _, a in player._debts])}{CURRENCY_SYMBOL}""")
+										player_has_rolled_dice = True
 										tuple_dices = await player.roll_dice()
 										player._dice_value = tuple_dices[0] + tuple_dices[1]
+
+										if player._jail_count:
+											# jail logic
+											if tuple_dices[0] == tuple_dices[1]:
+												# Double roll
+												cell = await player.get_out_of_jail(advance=False)
+											else:
+												writeX( player.writer, f"You rolled {tuple_dices} and stay in jail for a while".encode('utf-8') )
+												await self.broadcast( f"{player._name} rolled {tuple_dices} and stays in jail for a while" )
+
+												try:
+													await player.pay_bank(50, 'daily jail fee')
+												except InsufficientFundsAvailable:
+													try:
+														if not await player.is_bankrupt(50):
+															await player.pay_bank(50, 'daily jail fee')
+													except InsufficientFundsAvailable:
+														await self._game.bcellcast(f"{self._name} has insufficient funds to exit jail, dies in their cell and loses the game. RIP.")
+														raise
+
+												await clear_debts(player, 50//2)
+
+											player._jail_count -= 1
+											if not player._jail_count:
+												cell = await player.get_out_of_jail(advance=False)
+
+											# jail is jail.. cannot do much there
+											writeX( sender.writer, b"Your turn has ended." )
+											break
+
+										else:
+											if player.rent_to_pay:
+												# did player forget to pay the rent before leaving town?
+												player._debts.append(( cell.belongs_to, player.rent_to_pay ))
+												await self.broadcast(f"""{player._name} committed filouterie d'auberge! Total debt is now {sum([a for _, a in player._debts])}{CURRENCY_SYMBOL}""")
+
+											cell = await player.advance(player._dice_value)
+
+											if cell.type == 'tax':
+												await player.pay_tax(cell.tax_amount)
+												writeX( player.writer, f"Tax was {cell.tax_amount}{CURRENCY_SYMBOL}, thank you and see you soon!".encode('utf-8') )
+
+											elif cell.type == 'go to jail':
+												writeX( player.writer, """Suddenly, a booming voice declares: "Your adventure takes an unexpected detour!" Before you can protest, uniformed constables jump on you from all directions, throw you on the ground and examine your documents while you're trying you had to breathe under the pressure.""".encode('utf-8') )
+												if await player.go_to_jail():
+													writeX( sender.writer, b"You end your turn." )
+													break
+												else:
+													await self.broadcast(f"{player._name} used an 'out of jail' card, therefore not much happens.")
+
+											elif cell.type == 'community chest':
+												self.community_cards_deck.discard( await self.community_cards_deck.draw(player) )
+												# just to be safe, doesn't hurt (whatever the card is)
+												cell = self._game_board[player._position]
+
+											elif cell.type == 'chance':
+												self.chance_cards_deck.discard( await self.chance_cards_deck.draw(player) )
+												# just to be safe, doesn't hurt (whatever the card is)
+												cell = self._game_board[player._position]
 
 									elif b'over'.startswith(cmd[1]):
 										await self.broadcast(f"""{player._name} lies flat on the ground and rolls over""")
 									elif b'cigarette'.startswith(cmd[1]):
 										await self.broadcast(f"""{player._name} rolls themselves a cigarette""")
 
-									if player._game._game_board[player._position].type != 'jail' and not player._jail_count:
-										cell, current_rent_amount = await player.advance(player._dice_value)
-										player.rent_paid = False if current_rent_amount else True
-
-									elif self._jail_count:
-										current_rent_amount, player.rent_paid = 0, True	# NOTE it would make sense to set rent_paid to False
-										writeX( player.writer, f"You are in jail with {player._jail_count} days left to rot here. Unless you want to pay?".encode('utf-8') )
-
-									# TODO make this explicit.. with 'take'
-									if len(cell.inventory):
-										for item, amount in cell.inventory:
-											# TODO only treat this as cash if it is cash!
-											player._cash += amount
-											await self.broadcast(f"{player._name} found {amount}{CURRENCY_SYMBOL} of {item}")
-										cell.inventory.clear()
-
-									# jail logic
-									if cell.type == 'jail' and player._jail_count:
-										player._jail_count -= 1
-
-										# Double roll
-										if tuple_dices[0] == tuple_dices[1]:
-											player.get_out_of_jail()
-
-										# Player has been 3 rounds in jail
-										elif not player._jail_count:
-											if player.have_enough_money(50):
-												player.pay_bank(50)
-												player.get_out_of_jail()
-											else:
-												if not await player.is_bankrupt(50):
-													amount_to_mortgage = 50 - player._cash
-													await player.get_money_from_mortgages(amount_to_mortgage)
-													player.pay_bank(50)
-													player.get_out_of_jail()
-
-									elif cell.type == 'tax':
-										await player.pay_tax(cell.tax_amount)
-										writeX( player.writer, f"Tax was {cell.tax_amount}{CURRENCY_SYMBOL}, thank you and see you soon!".encode('utf-8') )
-
-									elif cell.type == 'go to jail':
-										await player.go_to_jail()
-
-									elif cell.type == 'community chest':
-										self.community_cards_deck.discard( await self.community_cards_deck.draw(player) )
-										# just to be safe, doesn't hurt (whatever the card is)
-										cell = self._game_board[player._position]
-										current_rent_amount = cell.estimate_rent(player)
-
-									elif cell.type == 'chance':
-										self.chance_cards_deck.discard( await self.chance_cards_deck.draw(player) )
-										# just to be safe, doesn't hurt (whatever the card is)
-										cell = self._game_board[player._position]
-										current_rent_amount = cell.estimate_rent(player)
+										"""
+										# TODO make this explicit.. with 'take'
+										if len(cell.inventory):
+											for item, amount in cell.inventory:
+												# TODO only treat this as cash if it is cash!
+												player._cash += amount
+												await self.broadcast(f"{player._name} found {amount}{CURRENCY_SYMBOL} of {item}")
+											cell.inventory.clear()
+										"""
 
 
 
 								elif b'buy'.startswith(cmd[0]):
 									cmd[0] = b'buy'
-									if b'road'.startswith(cmd[1]):
-										await player.buy_road( cell )
-									elif b'property'.startswith(cmd[1]) or b'station'.startswith(cmd[1]) or b'utility'.startswith(cmd[1]) :
+									if b'road'.startswith(cmd[1]) or b'property'.startswith(cmd[1]) or b'station'.startswith(cmd[1]) or b'utility'.startswith(cmd[1]) :
 										await player.buy_property( cell )
-										await self.broadcast(f"{player._name} is now the owner of {cell.name}")
 									elif b'house'.startswith(cmd[1]):
 										await player.buy_house( cell )
-										await self.broadcast(f"{player._name} bought a house on {cell.name} ; rent is now {cell.estimate_rent(None)}{CURRENCY_SYMBOL}")
 									elif b'hotel'.startswith(cmd[1]):
 										await player.buy_hotel( cell )
-										await self.broadcast(f"{player._name} bought a hotel on {cell.name} ; rent is now {cell.rent_with_4_houses_1_hotels}{CURRENCY_SYMBOL}")
 									else:
 										raise IndexError
 									await sender.writer.drain()
@@ -197,29 +268,41 @@ class Game:
 								elif b'pay'.startswith(cmd[0]):
 									cmd[0] = b'pay'
 									if b'rent'.startswith(cmd[1]):
-										if current_rent_amount:
-											await player.pay_opponent( cell.belongs_to, current_rent_amount )
-											await self.broadcast(f"{player._name} paid {current_rent_amount}{CURRENCY_SYMBOL} rent to {cell.belongs_to}")
-											current_rent_amount = 0
+										if player.rent_to_pay:
+											await player.pay_opponent( cell.belongs_to, player.rent_to_pay )
+											await self.broadcast(f"{player._name} paid {player.rent_to_pay}{CURRENCY_SYMBOL} rent to {cell.belongs_to}")
+											player.rent_to_pay = 0
 										else:
 											if cell.belongs_to is None:
-												await lose_money(cell)
+												await player.lose_money(cell)
 											else:
 												await self.broadcast(f"{player._name} owned no rent to {cell.belongs_to} but paid anyway.")
-												await player.pay_opponent( cell.belongs_to, current_rent_amount )
+												await player.pay_opponent( cell.belongs_to, player.rent_to_pay )
+
 									elif b'bail'.startswith(cmd[1]):
-										if cell.type == 'jail' and player._jail_count:
-											if player.have_enough_money(50):
-												await player.pay_bank(50)
-												await player.get_out_of_jail()
-											elif not await player.is_bankrupt(50):
-												await player.get_money_from_mortgages(50)
-												await player.pay_bank(50)
-												await player.get_out_of_jail()
+										if player._jail_count:
+
+											try:
+												if player.have_enough_money(50*player._jail_count):
+													await player.pay_bank(50*player._jail_count, 'clearing jail debt')
+											except InsufficientFundsAvailable:
+												try:
+													if not await player.is_bankrupt(50*player._jail_count):
+														await player.pay_bank(50*player._jail_count, 'clearing jail debt')
+												except InsufficientFundsAvailable:
+													await self._game.bcellcast(f"{self._name} has insufficient funds to exit jail, dies in their cell and loses the game. RIP.")
+													raise
+
+											await clear_debts(player, (50*player._jail_count)//2)
+
+											cell = await player.get_out_of_jail( advance=False )
+											writeX( sender.writer, b"Your turn has ended." )
+											break
 										else:
-											lose_money(cell)
+											player.lose_money(cell)
 
 									else:
+										print(f"OOPS (bail): {cmd}")
 										writeX( player.writer, "Pay what?" )
 										await player.writer.drain()
 
@@ -324,6 +407,9 @@ class Game:
 			#	return True
 			#return False
 
+		except ConnectionResetError:
+			print(f"lost a player! {player} {sender}")
+
 
 import random
 
@@ -396,7 +482,7 @@ class MonopolyServer:
 		else:
 			addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
 			logger.info(f"{self.name}: MonopolyServer starting {addrs}:{self.port=}")
-			print(f"{self.name}: listening on {addrs}:{self.port=}")
+			print(f"{self.name}: listening on {addrs}")#{', '.join(addrs[0])}:{addrs[1]}")
 
 			try:
 				async with server:
