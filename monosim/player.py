@@ -18,7 +18,7 @@ from termcolor import cprint
 	NOTE: for algorithmic simplicity, house count on a street stays at 4 if a hotel is built
 """
 
-from monosim.constants import CURRENCY_SYMBOL, GO_AMOUNT
+from monosim.constants import CURRENCY_SYMBOL, GO_AMOUNT, AMOUNT_WIDTH, format_amount
 from monosim.dice import roll_dice_physical, roll_dice_auto
 from monosim.board import get_color_to_house_mapping
 color_to_house_mapping, color_property_count = get_color_to_house_mapping()
@@ -335,21 +335,64 @@ class Player:
 		# TODO house management
 		writeX( self.writer, f"Your banker picks up the phone ; his voice is unpleasant and he seems very much annoyed.".encode('utf-8'))
 
-
 		def list_preselection():
-			# TODO better/proper table!
-			outstr =  f"\n\t    {'name':<21} price     | mortgage value | unmortage value | toggle\n"
-			i, a = 0, 0
-			for p, v in dict_mortgage_properties.items():
-				outstr += f"\t{i:>2}: {p.name:<21} {p.price:<3}{CURRENCY_SYMBOL} | {'+'+str(p.mortgage_value)+CURRENCY_SYMBOL if not p.is_mortgaged else '---'} | {'-'+str(p.unmortgage_value)+CURRENCY_SYMBOL if p.is_mortgaged else '---'} | {'[*]' if v else '[ ]'}\n"
-				if v:
-					if p.is_mortgaged:
-						a = a-p.unmortgage_value
-					else:
-						a = a+p.mortgage_value
-				i += 1
-			outstr += f"\nTotal amount from selection changes: {a}{CURRENCY_SYMBOL} (cash after: {self._cash+a}{CURRENCY_SYMBOL})\n"
-			writeX( self.writer, outstr.encode('utf-8'))
+			NAME_WIDTH   = 21
+			TOGGLE_WIDTH = 6
+
+			total_change = 0
+			lines = ['']
+
+			lines.append(
+				f"┌────┬{'─'*(NAME_WIDTH+2)}┬{'─'*(AMOUNT_WIDTH+2)}┬{'─'*(AMOUNT_WIDTH+2)}┬{'─'*(AMOUNT_WIDTH+2)}┬{'─'*(TOGGLE_WIDTH+2)}┐"
+			)
+
+			lines.append(
+				f"│ ID │ {'Property':<{NAME_WIDTH}} │ "
+				f"{'Price':>{AMOUNT_WIDTH}} │ "
+				f"{'Mortgage':>{AMOUNT_WIDTH}} │ "
+				f"{'Unmortgage':>{AMOUNT_WIDTH}} │ "
+				f"{'toggle':^{TOGGLE_WIDTH}} │"
+			)
+
+			lines.append(
+				f"├────┼{'─'*(NAME_WIDTH+2)}┼{'─'*(AMOUNT_WIDTH+2)}┼{'─'*(AMOUNT_WIDTH+2)}┼{'─'*(AMOUNT_WIDTH+2)}┼{'─'*(TOGGLE_WIDTH+2)}┤"
+			)
+
+			for i, (p, selected) in enumerate(dict_mortgage_properties.items()):
+
+				if p.is_mortgaged:
+					mortgage = format_amount(None)
+					unmortgage = format_amount(p.unmortgage_value, "-")
+				else:
+					mortgage = format_amount(p.mortgage_value, "+")
+					unmortgage = format_amount(None)
+
+				if selected:
+					total_change += (
+						-p.unmortgage_value if p.is_mortgaged
+						else p.mortgage_value
+					)
+
+				lines.append(
+					f"│ {i:>2} │ "
+					f"{p.name:<{NAME_WIDTH}} │ "
+					f"{format_amount(p.price)} │ "
+					f"{mortgage} │ "
+					f"{unmortgage} │ "
+					f"{('[*]' if selected else '[-]'):^{TOGGLE_WIDTH}} │"
+				)
+		
+			lines.append(
+				f"└────┴{'─'*(NAME_WIDTH+2)}┴{'─'*(AMOUNT_WIDTH+2)}┴{'─'*(AMOUNT_WIDTH+2)}┴{'─'*(AMOUNT_WIDTH+2)}┴{'─'*(TOGGLE_WIDTH+2)}┘"
+			)
+
+			lines.append("")
+			lines.append(f"{'Selection change':<18}: {format_amount(total_change, '+' if total_change >= 0 else '')}")
+			lines.append(f"{'Cash before':<18}: {format_amount(self._cash)}")
+			lines.append(f"{'Cash after':<18}: {format_amount(self._cash + total_change)}")
+
+			writeX( self.writer, "\n".join(lines).encode('utf-8'))
+
 
 		while True:
 			list_preselection()

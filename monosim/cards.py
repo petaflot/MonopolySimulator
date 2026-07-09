@@ -26,8 +26,7 @@ class Deck:
 		if not len(self.cards):
 			cprint(f"{self}: shuffling cards",'grey')
 			while len(self.discard_pile):
-				#self.cards.append(self.discard_pile.pop(randint(0, len(self.discard_pile)-1)))
-				self.cards.append(self.discard_pile.pop())
+				self.cards.append(self.discard_pile.pop(randint(0, len(self.discard_pile)-1)))
 			# on coupe le tas?
 
 		if len(self.cards) >= n:

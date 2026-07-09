@@ -4,7 +4,7 @@ from monosim.constants import CURRENCY_SYMBOL, GO_AMOUNT
 from monosim.board import game_board, get_community_chest_cards, get_chance_cards
 from monosim.bank import Bank
 from monosim.player import Player
-from monosim.custom_exceptions import InsufficientFundsAvailable, CannotDoThat#, CommandIncomplete
+from monosim.custom_exceptions import InsufficientFundsAvailable, CannotDoThat, AllDone
 
 import asyncio
 from collections import defaultdict
@@ -102,7 +102,6 @@ class Game:
 				self.turn_count += 1
 
 				for player in self.list_players:
-					print(f"it's {player._name}'s turn")
 					player_has_rolled_dice = False
 					player.dice_value = 'n/a'
 					#writeX(player.writer, f"{player._name}: it's your turn to play.".encode() )
@@ -336,6 +335,27 @@ class Game:
 
 								elif b'manage'.startswith(cmd[0]):
 									await player.manage_properties()
+
+								elif b'shout'.startswith(cmd[0]):
+									await self.broadcast( f"""From a distance, you hear {sender._name} shout "{cmd[1].decode('utf-8')}" """, NOT=(sender,))
+
+								elif b'say'.startswith(cmd[0]):
+									for p in self.list_players:
+										if self._game_board[p._position] == self._game_board[sender._position]:
+											writeX( p.writer, f"{sender._name} says: {cmd[1].decode('utf-8')}".encode('utf-8') )
+
+								elif b'tell'.startswith(cmd[0]):
+									pname, msg = tuple(x.decode('utf-8') for x in cmd[1].split(b' ', 1))
+									try:
+										for p in self.list_players:
+											if p._name.startswith( pname ):
+												writeX( p.writer, f"{sender._name} tells you: {msg}".encode('utf-8') )
+												raise AllDone
+									except AllDone:
+										pass
+									else:
+										writeX( sender.writer, f"could not match {pname} with a player name.".encode('utf-8') )
+									
 
 								elif b'bid'.startswith(cmd[0]):
 									cmd[0] = b'bid'

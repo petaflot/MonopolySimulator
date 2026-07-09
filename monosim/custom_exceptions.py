@@ -4,3 +4,4 @@ class InsufficientFundsAvailable(Exception): pass
 class NothingHereToSell(Exception): pass
 class CannotDoThat(Exception): pass
 class PlayerHasLost(Exception): pass
+class AllDone(Exception): pass
