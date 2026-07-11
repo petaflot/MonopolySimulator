@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=2.0">
+	<title id="page_title">MonopolyServer: {{ S.name }}</title>
+	<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="menubox"><div class="name">{{ S.name }}</div><!---ul class="menu">
+	{% for page in pages %}
+		{% if page['href'] == this_page %}
+	<li class="menu">{{ page.name }}</li>
+		{% else %}
+	<li class="menu"><a href="{{ page.href }}">{{ page.name }}</a></li>
+		{% endif %}
+	{% endfor %}
+</ul---></div>
+
+<table class="system_info">
+	<tr>
+		<td>Name</td>
+		<td><strong>{{ S.name }}</strong></td>
+	</tr>
+	<tr>
+		<td>Listening on</td>
+		<td>hsp://{{S.host}}:{{S.port}}/</td>	<!-- hsp:// is "half synaptic protocol" -->
+	</tr>
+	<tr>
+		<td>Up since</td>
+		<td>{{ S.startuptime.strftime(DATETIME_FMT) }}</td>
+	</tr>
+	<!--tr>
+		<td>Hostname</td>
+		<td>{{ S.hostname }}</td>
+	</tr-->
+	<tr>
+		<td>System load</td>
+		<td>{{ loadavg[0] }} (1m), {{ loadavg[1] }} (5m), {{ loadavg[2] }} (15m)</td>
+	</tr>
+	<tr>
+		<td>RAM usage</td>
+		<td>{{ (ram.available / (1024 ** 3)) | round(2) }} GB free, {{ (ram.used / (1024 ** 3)) | round(2) }} GB used / {{ (ram.total / (1024 ** 3)) | round(2) }} GB total</td>
+	</tr>
+	<!--tr>
+		<td>FS storage</td>
+		<td>{{ (disk_usage.free / (1024 ** 4)) | round(1) }} TB free, {{ (disk_usage.used / (1024 ** 4)) | round(1) }} TB used / {{ (disk_usage.total / (1024 ** 4)) | round(1) }} TB total, {{ disk_usage.percent }}% used</td>
+	</tr-->
+	<tr>
+		<td>I/O stats</td>
+		<td><em>TODO bandwidth usage</em></td>
+	</tr>
+	<tr>
+		<td>Game state</td>
+		<td>{{ 'Started' if game.has_started else 'Waiting for players' }}</td>
+	</tr>
+	<tr>
+		<td>Player count</td>
+		<td>{{ game.list_players.__len__() }}</td>
+	</tr>
+</table>
+
+<h2>Player stats</h2>
+
+<ul>
+{% for player in game._dict_players.values() %}
+	<li>{{ player._name }}: {{ player._cash }} + {{ player.mortgageable_amount }}</li>
+{% endfor %}
+</ul>
+
+
+
+</body>
+</html>

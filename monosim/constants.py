@@ -1,6 +1,7 @@
 # vim: noet ts=4 number
 CURRENCY_SYMBOL = "'000 $"
 GO_AMOUNT = 200
+DATETIME_FMT = "%Y-%m-%d %H:%M:%S"
 
 AMOUNT_WIDTH = 11	  # width of numeric part, including sign
 

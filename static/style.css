@@ -1,0 +1,88 @@
+body {
+	margin: 0;
+	background: #303030;
+	color: #00dd00
+}
+
+strong {
+	color: #00ffbb;
+	font-size: large
+}
+
+.whoami {
+	font-size: larger;
+	color: #00ffbb;
+	font-weight: bold;
+	padding: 5px;
+	margin: 5px;
+	background: #101010;
+}
+
+th {
+}
+
+em {
+	font-size: small
+}
+
+a {
+	color: #00ffbb
+}
+
+a.visited {
+	color: #004400
+}	/* meeh why not work? TODO fix */
+
+table.system_info {
+	margin-left: 2em;
+	width: 800px
+}
+
+table.namespaces {
+	margin-left: 2em;
+	width: 300px
+}
+
+.menubox {
+    display: flex;              /* Enable flexbox */
+    justify-content: center;    /* Horizontally center the list */
+    align-items: center;        /* Vertically center the list (optional, useful for taller divs) */
+    /*height: 100vh;              /* Set height to 100% of the viewport for demonstration */
+    /*border: 2px solid #ccc;    /* Optional border for visibility */
+}
+
+/* Remove default list styles */
+ul.menu {
+    list-style-type: none;  /* Remove bullet points */
+    padding: 0;
+    margin: 0;
+    display: flex;          /* Align items in a row */
+}
+
+/* Style each list item */
+ul.menu li.menu {
+    margin-right: 10px;     /* Space between list items */
+}
+
+/* Add a separator '|' except for the last item */
+ul.menu li.menu:not(:last-child)::after {
+    content: "|";           /* Add the separator */
+    margin-left: 10px;      /* Space between item and separator */
+}
+
+div.message {
+	color: black;
+	align: center;
+	padding: .5em;
+	margin: .5em;
+}
+
+div.SUCCESS {
+    border: solid 2px green;
+    background: #55ff5590;
+}
+
+div.ERROR {
+    border: solid 2px red;
+    background: #ff555590;
+}

@@ -32,18 +32,15 @@ COLOR_STR_LEN = 10
 class Player:
 	_dict_owned_colors = {color: None for color in color_to_house_mapping.keys()}
 
-	def __init__(self, name, game, reader, writer, dice_func = None):
-		self._name = name
+	def __init__(self, name, reader, writer, dice_func = None):
+		#print(f">>>>>>>>>>>>>>>> {name=}")
+		super().__init__( name, reader, writer )
 
 		self._position = 0
 		self._dice_value = 0
 		self._cash = 1500
 		self._properties_total_mortgageable_amount = 0
 		self._player_cards = []
-		self._jail_count = 0
-		self._free_visit = False	# TODO remove in favor of _jail_count
-		self._game = game
-		self._list_players = None
 		self._debts = []
 		self._list_owned_roads = []
 		self._list_owned_stations = []
@@ -53,13 +50,13 @@ class Player:
 		self._list_mortgaged_utilities = []
 		self._dict_owned_houses_hotels = {}
 		self.inventory = ['iPhone']	# TODO buy from shop on 'Go'/'Free parking'
-		self._has_lost = False
+		self._jail_count = 0
+		self._list_players = None
 		self.rent_multiplicator = 1
-
-		self._roll_dice = roll_dice_auto if dice_func is None else dice_func
-
-		self.reader, self.writer = reader, writer
 		self.rent_to_pay = 0
+		self._roll_dice = roll_dice_auto if dice_func is None else dice_func
+		self._has_lost = False
+
 
 	def roll_dice(self):
 		return self._roll_dice(player = self, game = self._game)
@@ -262,7 +259,11 @@ class Player:
 			else:
 				raise ValueError(cell.type)
 
-			writeX( self.writer, f"You are now the owner of {cell.name} ; rent is currently {cell.estimate_rent(None)}{CURRENCY_SYMBOL}".encode('utf-8'))
+			if cell.type == 'road':
+				writeX( self.writer, f"You are now the owner of {cell.name} ; rent is currently {cell.estimate_rent(None)}{CURRENCY_SYMBOL}".encode('utf-8'))
+			else:
+				writeX( self.writer, f"You are now the owner of {cell.name} ; rent is currently uncertain".encode('utf-8'))	# TODO figure sth out for the rent on utility/station (AttributeError: 'NoneType' object has no attribute '_dice_value')
+
 			await self._game.broadcast(f"{self._name} is now the owner of {cell.name} ; rent is currently {cell.estimate_rent(None)}{CURRENCY_SYMBOL}", NOT=(self,))
 
 		try:
